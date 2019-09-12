@@ -1,0 +1,280 @@
+%%
+/*
+Date Written: December 14, 2010
+
+Name: mcp109_082010.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+12/14/2010            JLB             new version of form
+===========================
+*/
+
+Program
+  Name = "mcp109_082010";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[16] = "mcp109_082010.cq";
+ String L_COPY_NAME[20] ;
+ String l_company_id,
+        l_font[35];
+ Unsigned ascii number l_max_lines=60;
+ Unsigned Ascii Number L_YEAR[4];
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned ascii number l_found[1];
+ Unsigned Ascii Number L_ITEM_COUNTER;
+ Unsigned Ascii Number L_STATE[2]=0;
+ Unsigned Ascii Number L_LOOP;
+ wdate L_EFF_DATE;
+ Unsigned Ascii Number L_LINE_COUNTER;
+ Unsigned Ascii Number L_PAGE_NUMBER;
+ Unsigned ascii number l_form[2];
+
+   Include "csfonts.inc"
+   Include "swsut100.var"
+   Include "swsut200.var"
+   Include "line_spacing.var"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access sfpend_alias,
+   Set sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access CPPENDORSE,
+   Set cppendorse:policy_no    = sfpprint1:policy_no ,
+       cppendorse:pol_year     = sfpprint1:pol_year ,
+       cppendorse:end_sequence = sfpprint1:end_sequence, generic
+
+Access cppgeneral,
+   Set cppgeneral:policy_no    = sfpprint1:policy_no ,
+       cppgeneral:pol_year     = sfpprint1:pol_year ,
+       cppgeneral:end_sequence = sfpprint1:end_sequence, generic
+
+Access SFSLINE,
+   Set SFSLINE:COMPANY_ID       = SFPNAME:COMPANY_ID,
+       SFSLINE:LINE_OF_BUSINESS = SFPNAME:LINE_OF_BUSINESS,
+       sfsline:lob_subline      = "00", exact
+
+   Include "swsut100.inc"
+   I_CODE = "MCP109"
+   Include "swsut200.inc"
+
+While sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO And
+      sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR And
+      sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE
+{
+  If sfpend_alias:CODE = I_CODE Then
+    {
+      If sfpmaster:state <> 0 then
+        {
+          l_state = sfpmaster:state
+        }
+      If cppgeneral:state <> 0 then
+        {
+          L_STATE            = cppgeneral:STATE
+        }
+      L_COMPANY_ID       = sfpname:COMPANY_ID
+      L_LINE_OF_BUSINESS = sfsline:rating_LINE_OF_BUSINESS
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE, generic
+
+      While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+            SFSOPTEND:STATE            = L_STATE and
+            SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+            SFSOPTEND:CODE             = I_CODE
+
+      {  --start of sfsoptend check
+        If (sfpname:eff_date >= sfsoptend:eff_date and
+           (sfpname:eff_date < sfsoptend:exp_date or
+                               sfsoptend:exp_date = 0)) then
+          {
+            l_eff_date = sfsoptend:eff_date
+          }
+        next sfsoptend
+      }
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE,
+             SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+      If sfsoptend:edition <> 0 then
+        {
+          Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+          Writefile(L_FILE_NAME,"%s","<033>&a420h7080V")
+          Writefile(L_FILE_NAME,"%s","Ed. ")
+          Writefile(L_FILE_NAME,"%n",sfsoptend:edition)
+        }
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+      Writefile(L_FILE_NAME,"%s",l_copyright_6)
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+      Writefile(L_FILE_NAME,"%s","<033>&a4300h120V")
+      Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","OUTDOOR ANTENNA/SATELLITE DISH COVERAGE")
+      Writefile(L_FILE_NAME,"%s","<033>&a+30h+20V")
+      Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+      Writefile(L_FILE_NAME,"%s","<033>&a+30h-20V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","PART I")
+
+      Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+130V")
+      Writefile(L_FILE_NAME,"%s","This endorsement establishes an additional separate item of covered property.  ")
+      Writefile(L_FILE_NAME,"%s","The required information may be shown below or elsewhere")
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","in this policy.")
+
+      Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+130V")
+      Writefile(L_FILE_NAME,"%s","The provisions of this endorsement apply only when the endorsement number is listed in the Declarations.")
+      Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","Except as provided below, all other provisions in this policy are unchanged.")
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+20V")
+      Writefile(L_FILE_NAME,"%s","<033>*c5200h5v0P") --Horizontal line
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+240V")
+      Writefile(L_FILE_NAME,"%s","Policy # ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+      Writefile(L_FILE_NAME,"%n",sfpprint1:policy_no)
+
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+200V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+      Writefile(L_FILE_NAME,"%s","SCHEDULE")
+      Writefile(L_FILE_NAME,"%s","<033>&a1430h+140V")
+      Writefile(L_FILE_NAME,"%s","Description of")
+      Writefile(L_FILE_NAME,"%s","<033>&a2700h+0V")
+      Writefile(L_FILE_NAME,"%s","Cause of")
+      Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+      Writefile(L_FILE_NAME,"%s","Limit of")
+      Writefile(L_FILE_NAME,"%s","<033>&a4450h+0V")
+      Writefile(L_FILE_NAME,"%s","Coinsurance")
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","Number")
+      Writefile(L_FILE_NAME,"%s","<033>&a1210h+0V")
+      Writefile(L_FILE_NAME,"%s","Antennas/Satellite Dishes")
+      Writefile(L_FILE_NAME,"%s","<033>&a2640h+0V")
+      Writefile(L_FILE_NAME,"%s","Loss Option")
+      Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+      Writefile(L_FILE_NAME,"%s","Liability")
+      Writefile(L_FILE_NAME,"%s","<033>&a4510h+0V")
+      Writefile(L_FILE_NAME,"%s","(If not .80)")
+
+                   --***Data Starts Here***
+      Access CPPENDORSE,
+         Set cppendorse:policy_no    = sfpprint1:policy_no ,
+             cppendorse:pol_year     = sfpprint1:pol_year ,
+             cppendorse:end_sequence = sfpprint1:end_sequence,
+             cppendorse:prem_no      = sfpend_alias:prem_no,
+             cppendorse:build_no     = sfpend_alias:build_no,
+             cppendorse:code         = sfpend_alias:code,   generic
+
+      Writefile(L_FILE_NAME,"%s",l_push)
+      Writefile(L_FILE_NAME,"%s",l_arial_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","Location ")
+      Writefile(L_FILE_NAME,"%n",cppgeneral:prem_no)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","Building ")
+      Writefile(L_FILE_NAME,"%n",cppgeneral:build_no)
+
+      Writefile(L_FILE_NAME,"%s",l_pop)
+      Writefile(L_FILE_NAME,"%s",l_push)
+
+      L_FONT             = l_arial_9
+      L_V_POSITION       = "+120"
+      L_H_POSITION       = "900"
+      L_CHARACTER_STRING = cppendorse:description
+      L_MAX_CHAR         = 45
+      include "line_spacing.inc"
+
+      Writefile(L_FILE_NAME,"%s",l_pop)
+      Writefile(L_FILE_NAME,"%s","<033>&a3550h+120V")
+      Writefile(L_FILE_NAME,"%s",l_arial_9)
+      Writefile(L_FILE_NAME,"%s","$ ")
+      Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+      Writefile(L_FILE_NAME,"%s",str(cppendorse:limit[1],"ZZ,ZZZ,ZZZ"))
+      Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+
+      Access CPPgeneral,
+         Set cppgeneral:policy_no    = sfpprint1:policy_no ,
+             cppgeneral:pol_year     = sfpprint1:pol_year ,
+             cppgeneral:end_sequence = sfpprint1:end_sequence, generic
+
+      Writefile(L_FILE_NAME,"%s","<033>&a4510h+0V")
+      if cppgeneral:coinsurance not one of 80 then
+        {
+          Writefile(L_FILE_NAME,"%s",l_arial_9)
+          Writefile(L_FILE_NAME,"%n",cppgeneral:coinsurance)
+        }
+
+      Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h3450V")
+      Writefile(L_FILE_NAME,"%s","* Item No. or Location/Building Nos. as Shown in the Declarations")
+      Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+240V")
+      Writefile(L_FILE_NAME,"%s","COVERAGE MODIFICATION")
+      Writefile(L_FILE_NAME,"%s",l_arial_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","The designated outdoor antennas and satellite dishes (including lead-in wiring, masts and towers) are covered up to the Limit of Liability")
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","subject to the applicable Cause of Loss Option and Coinsurance factor.")
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+150V")
+      Writefile(L_FILE_NAME,"%s","Outdoor antennas and satellite dishes covered under MCP 109 are not covered under Supplemental Coverage 12.")
+
+      Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+60V")
+      Writefile(L_FILE_NAME,"%s","ADDITIONAL COVERAGE")
+      Writefile(L_FILE_NAME,"%s",l_arial_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","When MCP 503 is listed in the Declarations as applicable, Exclusion E.4 under Coverage D does not apply in connection with the property")
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","described in this endorsement for the applicable Causes of Loss.")
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","<FF>")
+    }
+  Next sfpend_alias
+}
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+end

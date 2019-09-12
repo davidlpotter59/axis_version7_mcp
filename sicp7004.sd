@@ -1,0 +1,454 @@
+%%
+/*
+Date Written: February 06, 2006
+
+Name: sicp7004.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+02/06/2006             DWR     New program name for new MSO Edition
+===========================
+*/
+
+Program
+  Name = "sicp7004";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[11] = "sicp7004.cq";
+ String L_COPY_NAME[20] ;
+ String L_SFPLOCATION_ZIP;
+ String L_COMPANY_ID[10];
+ Unsigned ascii number l_max_lines;
+ Unsigned Ascii Number L_YEAR[4];
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned ascii number l_found[1];
+ Unsigned Ascii Number L_ITEM_COUNTER;
+ Unsigned Ascii Number L_STATE[2]=0;
+ Unsigned Ascii Number L_LOOP;
+ wdate L_EFF_DATE;
+ Unsigned Ascii Number L_LINE_COUNTER;
+ Unsigned Ascii Number L_PAGE_NUMBER;
+
+   Include "swsut100.var"
+   Include "swsut200.var"
+   Include "csfonts.inc"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE , Generic
+
+Access SFPEND,
+   Set SFPEND:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPEND:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPEND:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access cppcrime1,
+   Set cppcrime1:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppcrime1:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppcrime1:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access cppcrime,
+   Set cppcrime:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppcrime:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppcrime:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access SFSLINE,
+   Set SFSLINE:COMPANY_ID       = SFPNAME:COMPANY_ID,
+       SFSLINE:LINE_OF_BUSINESS = SFPNAME:LINE_OF_BUSINESS,
+       sfsline:lob_subline      = "00", exact
+
+  Include "swsut100.inc"
+  I_CODE = "MCP771"
+  Include "swsut200.inc"
+
+While cppcrime1:POLICY_NO    = SFPPRINT1:POLICY_NO And
+      cppcrime1:POL_YEAR     = SFPPRINT1:POL_YEAR And
+      cppcrime1:END_SEQUENCE = SFPPRINT1:END_SEQUENCE
+{
+  If cppcrime1:code = I_CODE then
+    {
+      L_STATE            = cppcrime1:STATE
+      L_COMPANY_ID       = sfpname:COMPANY_ID
+      L_LINE_OF_BUSINESS = sfsline:rating_LINE_OF_BUSINESS
+
+    Access SFSOPTEND,
+       Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+           SFSOPTEND:STATE            = L_STATE,
+           SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+           SFSOPTEND:CODE             = I_CODE, generic
+
+     While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+           SFSOPTEND:STATE            = L_STATE and
+           SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+           SFSOPTEND:CODE             = I_CODE
+
+       {  --start of sfsoptend check
+         If (sfpname:eff_date >= sfsoptend:eff_date and
+            (sfpname:eff_date < sfsoptend:exp_date or
+             sfsoptend:exp_date = 0)) then
+           {
+             l_eff_date = sfsoptend:eff_date
+           }
+         next sfsoptend
+       }
+
+    Access SFSOPTEND,
+       Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+           SFSOPTEND:STATE            = L_STATE,
+           SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+           SFSOPTEND:CODE             = I_CODE,
+           SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+    Access cppcrime,
+       Set cppcrime:POLICY_NO    = cppcrime1:POLICY_NO ,
+           cppcrime:POL_YEAR     = cppcrime1:POL_YEAR ,
+           cppcrime:END_SEQUENCE = cppcrime1:END_SEQUENCE, Generic
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+    Writefile(L_FILE_NAME,"%s",l_copyright_6)
+    Writefile(L_FILE_NAME,"%s"," ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+    Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+    Writefile(L_FILE_NAME,"%s","<033>&a4300h120V")
+    Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+    Writefile(L_FILE_NAME,"%s"," ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+
+    Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","EMPLOYEE DISHONESTY COVERAGE (FORM A)")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+    Writefile(L_FILE_NAME,"%s","This endorsement together with the Crime Common Provisions Form provides crime insurance for employee dishonesty.  The")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+    Writefile(L_FILE_NAME,"%s","required information may be shown below or elsewhere in this policy.")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a90h+130V")
+    Writefile(L_FILE_NAME,"%s","The provisions of this endorsement apply ")
+    Writefile(L_FILE_NAME,"%s","only when the endorsement number ")
+    Writefile(L_FILE_NAME,"%s","is listed in the Declarations. ")
+    Writefile(L_FILE_NAME,"%s","<NL>")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a90h+0V")
+    Writefile(L_FILE_NAME,"%s","Except as provided below, all other provisions ")
+    Writefile(L_FILE_NAME,"%s","in this policy are unchanged.")
+    Writefile(L_FILE_NAME,"%s","<NL>")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a90h-80V<033>*c5300h8v0P")
+    Writefile(L_FILE_NAME,"%s","<NL>")           --Horizontal line
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a90h+60V")
+    Writefile(L_FILE_NAME,"%s","Policy # ")
+    Writefile(L_FILE_NAME,"%n",sfpprint1:policy_no)
+    Writefile(L_FILE_NAME,"%s","<NL>")
+
+    Writefile(L_FILE_NAME,"%s","<033>&a90h+40V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","SCHEDULE")
+    Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+    Writefile(L_FILE_NAME,"%s","<033>*c75h8v0P")
+    Writefile(L_FILE_NAME,"%s","<033>&a+115h+30V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","DECLARATIONS SUPPLEMENT")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a90h+160V")
+    Writefile(L_FILE_NAME,"%s","$")
+    Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_10)
+    Writefile(L_FILE_NAME,"%s",str(cppcrime:limit[1],"ZZ,ZZZ,ZZZ"))
+    Writefile(L_FILE_NAME,"%s","<033>&a990h+0V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","<")
+    Writefile(L_FILE_NAME,"%s","<033>&a1190h+0V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+    Writefile(L_FILE_NAME,"%s","Limit of Liability")
+    Writefile(L_FILE_NAME,"%s","<NL>")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a90h+0V")
+    Writefile(L_FILE_NAME,"%s","$")
+    Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_10)
+    Writefile(L_FILE_NAME,"%s",str(cppcrime:deductible,"ZZ,ZZZ,ZZZ"))
+    Writefile(L_FILE_NAME,"%s","<033>&a990h+0V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","<")
+    Writefile(L_FILE_NAME,"%s","<033>&a1190h+0V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+    Writefile(L_FILE_NAME,"%s","Deductible")
+    Writefile(L_FILE_NAME,"%s","<NL>")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a90h+180V")
+    Writefile(L_FILE_NAME,"%s","COVERAGE MODIFICATION")
+    Writefile(L_FILE_NAME,"%s","<NL>")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1050h+0V")
+    Writefile(L_FILE_NAME,"%s","Coverage")
+    Writefile(L_FILE_NAME,"%s","<033>&a1050h+120V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","We ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","cover, up to the limit of liability shown above, loss to ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","money, securities ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","and ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","property other than")
+
+    Writefile(L_FILE_NAME,"%s","<033>&a1050h+120V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","money and securities ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","resulting directly from dishonest or fraudulant acts involving ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","employees ")
+
+    Writefile(L_FILE_NAME,"%s","<033>&a1050h+120V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","(whether acting alone or in collusion with others).")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a90h+180V")
+    Writefile(L_FILE_NAME,"%s","ADDITIONAL EXCLUSIONS")
+    Writefile(L_FILE_NAME,"%s","<NL>")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1050h+0V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","In addition to the Crime Common Exclusions, ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","we ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","do not provide insurance for any sort of loss ")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1050h+120V")
+    Writefile(L_FILE_NAME,"%s","consisting of or resulting from the following:")
+    Writefile(L_FILE_NAME,"%s","<NL>")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1050h+0V")
+    Writefile(L_FILE_NAME,"%s","A. ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_bold_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+0V")
+    Writefile(L_FILE_NAME,"%s","Employee ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+    Writefile(L_FILE_NAME,"%s","Cancelled Under Prior Insurance")
+    Writefile(L_FILE_NAME,"%s","<NL>")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+0V")
+    Writefile(L_FILE_NAME,"%s","Loss caused by anyone for whom similar prior insurance has been cancelled and not reinstated ")
+    Writefile(L_FILE_NAME,"%s","<NL>")
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+0V")
+    Writefile(L_FILE_NAME,"%s","since the last such cancellation.")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1050h+160V")
+    Writefile(L_FILE_NAME,"%s","B. ")
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+0V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+    Writefile(L_FILE_NAME,"%s","Inventory Shortages")
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+120V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","Loss where proof of the existence of, or amount of, such loss is dependent upon an inventory")
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+120V")
+    Writefile(L_FILE_NAME,"%s","computation or a profit and loss computation.  But, such can be used to support a claim which ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","you")
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+120V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","otherwise prove.")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a90h+180V")
+    Writefile(L_FILE_NAME,"%s","ADDITIONAL CONDITIONS")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1050h+120V")
+    Writefile(L_FILE_NAME,"%s","A. ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+0V")
+    Writefile(L_FILE_NAME,"%s","Cancellation")
+    Writefile(L_FILE_NAME,"%s","<NL>")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+0V")
+    Writefile(L_FILE_NAME,"%s","Condition 3 of the General Conditions is amended as follows:")
+    Writefile(L_FILE_NAME,"%s","<NL>")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+0V")
+    Writefile(L_FILE_NAME,"%s","1. ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1450h+0V")
+    Writefile(L_FILE_NAME,"%s","This insurance is automatically cancelled on any ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","employee ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","immediately upon discovery by ")
+    Writefile(L_FILE_NAME,"%s","<033>&a1450h+120V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","you ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","or ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","your ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","directors, officers, partners or trustees of such ")
+    Writefile(L_FILE_NAME,"%s","dishonesty or fraud by the ")
+    Writefile(L_FILE_NAME,"%s","<033>&a1450h+120V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","employee, ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","whether before or after becoming eployed by ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","you ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","and whether or not ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","you ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","make")
+    Writefile(L_FILE_NAME,"%s","<033>&a1450h+120V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","claim or report to ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","us. ")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+160V")
+    Writefile(L_FILE_NAME,"%s","2. ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1450h+0V")
+    Writefile(L_FILE_NAME,"%s","We ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","may cancel this insurance on any ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","employee ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","by mailing or delivering to the ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","first named ")
+    Writefile(L_FILE_NAME,"%s","<033>&a1450h+120V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","insured ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","written notice of such cancellation not less than 30 days prior to the effective date of ")
+
+    Writefile(L_FILE_NAME,"%s","<033>&a1450h+120V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","the cancellation.  ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","We ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","will mail or deliver such notice to the ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","first named insured's ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","last mailing")
+    Writefile(L_FILE_NAME,"%s","<033>&a1450h+120V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","address known to ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","us. ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","If notice is mailed, proof of mailing is sufficient proof of notice. ")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1050h+160V")
+    Writefile(L_FILE_NAME,"%s","B. ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+0V")
+    Writefile(L_FILE_NAME,"%s","Duties When Loss Occurs")
+    Writefile(L_FILE_NAME,"%s","<NL>")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+0V")
+    Writefile(L_FILE_NAME,"%s","The Duties Condition is further amended as follows:")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+120V")
+    Writefile(L_FILE_NAME,"%s","If a loss is less than the deductible amount, ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","you ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","must still give immediate written notice to ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","us ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","of")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+120V")
+    Writefile(L_FILE_NAME,"%s","such loss, and, at ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","our ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","request, submit to ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+    Writefile(L_FILE_NAME,"%s","us ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","a statement describing the loss.")
+
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1050h+160V")
+    Writefile(L_FILE_NAME,"%s","C. ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+0V")
+    Writefile(L_FILE_NAME,"%s","A $200 deductible per occurrence applies, unless a greater deductible amount is shown for this")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a1250h+120V")
+    Writefile(L_FILE_NAME,"%s","coverage.")
+
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+    Writefile(L_FILE_NAME,"%s","<033>&a90h+180V")
+    Writefile(L_FILE_NAME,"%s","ADDITIONAL DEFINITIONS")
+
+    Writefile(L_FILE_NAME,"%s","<033>&a1050h+120V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+    Writefile(L_FILE_NAME,"%s","Occurrence ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","means all loss caused by, or involving, one or more ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+    Writefile(L_FILE_NAME,"%s","employees,  ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","whether the result ")
+    Writefile(L_FILE_NAME,"%s","<033>&a1050h+120V")
+    Writefile(L_FILE_NAME,"%s","of a single act or a series of acts.")
+
+    Writefile(L_FILE_NAME,"%s","<033>&a1050h+140V")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+    Writefile(L_FILE_NAME,"%s","Employee ")
+    Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+    Writefile(L_FILE_NAME,"%s","also includes property managers and managing agents.")
+    Writefile(L_FILE_NAME,"%s","<FF>")
+    }
+  Next cppcrime1
+}
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+End

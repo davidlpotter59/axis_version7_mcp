@@ -1,0 +1,189 @@
+%%
+/*
+Date Written: June 17, 2003
+
+Name: mcp012_091989.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+06/06/2011            JLB                  new naming convetion of form/
+                                           also cleaned up and modified coding
+===========================
+*/
+
+Program
+  Name = "mcp012_091989";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[16] = "mcp012_091989.cq";
+ String l_company_id;
+ String L_COPY_NAME[20] ;
+ Unsigned ascii number l_max_lines=60;
+ Unsigned Ascii Number L_YEAR[4];
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned ascii number l_found[1];
+ Unsigned Ascii Number L_ITEM_COUNTER;
+ Unsigned Ascii Number L_STATE[2]=0;
+ Unsigned Ascii Number L_LOOP;
+ wdate L_EFF_DATE;
+ Unsigned Ascii Number L_LINE_COUNTER;
+ Unsigned Ascii Number L_PAGE_NUMBER;
+
+   Include "csfonts.inc"
+   Include "swsut100.var"
+   Include "swsut200.var"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access SFPLOCATION,
+   Set SFPLOCATION:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPLOCATION:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPLOCATION:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access SFPEND,
+   Set SFPEND:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPEND:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPEND:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access cppgeneral,
+   Set cppgeneral:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppgeneral:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppgeneral:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access sfsline,
+   Set sfsline:line_of_business = sfpname:line_of_business,
+       sfsline:company_id       = sfpname:company_id,
+       sfsline:lob_subline      = "00", exact
+
+   Include "swsut100.inc"
+   I_CODE = "MCP012"
+   Include "swsut200.inc"
+
+
+While SFPEND:POLICY_NO    = SFPPRINT1:POLICY_NO And
+      SFPEND:POL_YEAR     = SFPPRINT1:POL_YEAR And
+      SFPEND:END_SEQUENCE = SFPPRINT1:END_SEQUENCE
+
+{
+  If SFPEND:CODE = I_CODE Then
+    {
+      l_state            = cppgeneral:state
+      L_COMPANY_ID       = sfpname:COMPANY_ID
+      L_LINE_OF_BUSINESS = sfsline:rating_LINE_OF_BUSINESS
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE, generic
+
+       While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+             SFSOPTEND:STATE            = L_STATE and
+             SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+             SFSOPTEND:CODE             = I_CODE
+
+         {  --start of sfsoptend check
+           If (sfpname:eff_date >= sfsoptend:eff_date and
+              (sfpname:eff_date < sfsoptend:exp_date or
+               sfsoptend:exp_date = 0)) then
+             {
+               l_eff_date = sfsoptend:eff_date
+             }
+           next sfsoptend
+         }
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE,
+             SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+      If sfsoptend:edition <> 0 then
+        {
+          Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+          Writefile(L_FILE_NAME,"%s","<033>&a420h7080V")
+          Writefile(L_FILE_NAME,"%s","Ed. ")
+          Writefile(L_FILE_NAME,"%n",sfsoptend:edition)
+        }
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+      Writefile(L_FILE_NAME,"%s",l_copyright_6)
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+      Writefile(L_FILE_NAME,"%s","<033>&a4300h120V")
+      Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h-60V<033>*c5000h5v0P")
+      Writefile(L_FILE_NAME,"%s","<033>&a1000h+140V")
+      Writefile(L_FILE_NAME,"%s","SUPPLEMENTAL DECLARATIONS ")
+      Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+      Writefile(L_FILE_NAME,"%s","<033>*c100h3v0P")
+      Writefile(L_FILE_NAME,"%s","<033>&a+130h+30V")
+      Writefile(L_FILE_NAME,"%s"," MCP 012 09 89")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+40V<033>*c5000h5v0P")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+      Writefile(L_FILE_NAME,"%s","The following special limits and rating factors apply to the designated coverages, in accordance with the provisions of the")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+      Writefile(L_FILE_NAME,"%s","Coverage Form applicable in this policy.")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","MCP 012 is issued as an adjunct to and in connection with MCP 011 / 013 / 015 / 017.")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+20V<033>*c5000h5v0P")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+      Writefile(L_FILE_NAME,"%s","PART I B")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+      Writefile(L_FILE_NAME,"%s","SUPPLEMENTAL COVERAGES")
+      Writefile(L_FILE_NAME,"%s","<033>&a3750h+120V")
+      Writefile(L_FILE_NAME,"%s","(C)")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+      Writefile(L_FILE_NAME,"%s","COVERAGE ")
+      Writefile(L_FILE_NAME,"%s","<033>&a3500h+0V")
+      Writefile(L_FILE_NAME,"%s","REVISED ITEM")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+      Writefile(L_FILE_NAME,"%s","(List by Number per MCP 011 / 013 / 015 / 017) ")
+      Writefile(L_FILE_NAME,"%s","<033>&a3475h+0V")
+      Writefile(L_FILE_NAME,"%s",l_underline_start)
+      Writefile(L_FILE_NAME,"%s","LIMIT / FACTOR")
+      Writefile(L_FILE_NAME,"%s",l_underline_end)
+      Writefile(L_FILE_NAME,"%s","<033>&a4400h+120V")
+      Writefile(L_FILE_NAME,"%s",l_underline_start)
+      Writefile(L_FILE_NAME,"%s","NUMBER*")
+      Writefile(L_FILE_NAME,"%s",l_underline_end)
+      Writefile(L_FILE_NAME,"%s","<033>&a3375h+120V")
+      Writefile(L_FILE_NAME,"%s","$")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+4800V")
+      Writefile(L_FILE_NAME,"%s","*Item No. or Location / Building Nos. as Shown in the Declarations")
+      Writefile(L_FILE_NAME,"%s","<FF>")
+    }
+  Next SFPEND
+}
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+End

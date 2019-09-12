@@ -1,0 +1,284 @@
+%%
+/*
+Date Written: August 11, 2003
+
+Name: mcp133_041992.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+08/11/2003             RMG        Starting Form
+12/18/2003             DWR        Entered Data fields and completed formatting
+02/28/2007             JLB        Changed form name & accesses
+===========================
+*/
+
+Program
+  Name = "mcp133_041992";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[16] = "mcp133_041992.cq";
+ string l_font[35];
+ String L_COMPANY_ID ;
+ String L_COPY_NAME[20] ;
+ Unsigned ascii number l_max_lines=60;
+ Unsigned Ascii Number L_YEAR[4];
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned ascii number l_found[1];
+ Unsigned Ascii Number L_ITEM_COUNTER;
+ Unsigned Ascii Number L_STATE[2]=0;
+ Unsigned Ascii Number L_LOOP;
+ wdate L_EFF_DATE;
+ Unsigned Ascii Number L_LINE_COUNTER;
+ Unsigned Ascii Number L_PAGE_NUMBER;
+
+   Include "csfonts.inc"
+   Include "swsut100.var"
+   Include "swsut200.var"
+   Include "line_spacing.var"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic;
+
+Access cppendorse,
+   Set cppendorse:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppendorse:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppendorse:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access cppglass,
+   Set cppglass:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppglass:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppglass:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access sfsline,
+   Set sfsline:company_id            = sfpname:company_id,
+       sfsline:line_of_business      = sfpname:line_of_business,
+       sfsline:lob_subline           = "00", exact
+
+Update
+
+   Include "swsut100.inc"
+   I_CODE = "MCP133"
+   Include "swsut200.inc"
+
+While cppglass:POLICY_NO    = SFPPRINT1:POLICY_NO And
+      cppglass:POL_YEAR     = SFPPRINT1:POL_YEAR And
+      cppglass:END_SEQUENCE = SFPPRINT1:END_SEQUENCE
+{
+  L_STATE            = cppglass:STATE
+  L_COMPANY_ID       = sfpname:COMPANY_ID
+  L_LINE_OF_BUSINESS = sfsline:rating_line_of_business
+
+  Access SFSOPTEND,
+     Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+         SFSOPTEND:STATE            = L_STATE,
+         SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+         SFSOPTEND:CODE             = I_CODE, generic
+
+  While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+        SFSOPTEND:STATE            = L_STATE and
+        SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+        SFSOPTEND:CODE             = I_CODE
+
+  {  --start of sfsoptend check
+    If (sfpname:eff_date >= sfsoptend:eff_date and
+       (sfpname:eff_date < sfsoptend:exp_date or
+                           sfsoptend:exp_date = 0)) then
+      {
+        l_eff_date = sfsoptend:eff_date
+      }
+    next sfsoptend
+  }
+
+  Access SFSOPTEND,
+     Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+         SFSOPTEND:STATE            = L_STATE,
+         SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+         SFSOPTEND:CODE             = I_CODE,
+         SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+  If sfsoptend:edition <> 0 then
+    {
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a420h7080V")
+      Writefile(L_FILE_NAME,"%s","Ed. ")
+      Writefile(L_FILE_NAME,"%n",sfsoptend:edition)
+    }
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+  Writefile(L_FILE_NAME,"%s",l_copyright_6)
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a4300h120V")
+  Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","DAMAGED GLASS EXCLUSION")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h+14V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-14V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s"," PART I")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","This endorsement excludes the designated glass from the provisions of Glass Coverage")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+  Writefile(L_FILE_NAME,"%s","The provisions of this endorsement apply only when the endorsement number is listed in the Declarations.")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","Except as provided below, all other provisions in this policy are unchanged.")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+40V")
+  Writefile(L_FILE_NAME,"%s","<033>*c5200h5v0P") --Horizontal line
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+  Writefile(L_FILE_NAME,"%s","Policy # ")
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%n",sfpprint1:policy_no)
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+240V")
+  Writefile(L_FILE_NAME,"%s","COVERAGE MODIFICATION")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s","The glass designated in the schedule is broken, cracked or damaged.")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s"," We")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s"," will not cover loss or damage")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s","caused by or resulting from the described condition, or any extension of it, as shown in the diagram or")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s","otherwise described below.")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+240V")
+  Writefile(L_FILE_NAME,"%s","SCHEDULE")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","Designated Glass")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a2000h+120V")
+  Writefile(L_FILE_NAME,"%s","Dimensions")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","Plate")
+  Writefile(L_FILE_NAME,"%s","<033>&a2000h+0V")
+  Writefile(L_FILE_NAME,"%s","in Inches")
+  Writefile(L_FILE_NAME,"%s","<033>&a3200h+0V")
+  Writefile(L_FILE_NAME,"%s","Description of Glass")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","Number")
+  Writefile(L_FILE_NAME,"%s","<033>&a2025h+0V")
+  Writefile(L_FILE_NAME,"%s","L")
+  Writefile(L_FILE_NAME,"%s","<033>&a2375h+0V")
+  Writefile(L_FILE_NAME,"%s","W")
+  Writefile(L_FILE_NAME,"%s","<033>&a3200h+0V")
+  Writefile(L_FILE_NAME,"%s","Position in Building ")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%n",cppglass:no_plates)
+  Writefile(L_FILE_NAME,"%s","<033>&a2025h+0V")
+  Writefile(L_FILE_NAME,"%n",cppglass:length)
+  Writefile(L_FILE_NAME,"%s","<033>&a2375h+0V")
+  Writefile(L_FILE_NAME,"%n",cppglass:width)
+  Writefile(L_FILE_NAME,"%s","<033>&a3200h+0V")
+  Writefile(L_FILE_NAME,"%s",cppglass:description[1])
+  Writefile(L_FILE_NAME,"%s","<033>&a3200h+120V")
+  Writefile(L_FILE_NAME,"%s",cppglass:description[2])
+  Writefile(L_FILE_NAME,"%s","<033>&a3200h+120V")
+  Writefile(L_FILE_NAME,"%n",cppglass:position_use)
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+800V")
+  Writefile(L_FILE_NAME,"%s","Diagrams of Glass Breaks, Cracks or Damage")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a820h+120V")
+  Writefile(L_FILE_NAME,"%s","1")
+  Writefile(L_FILE_NAME,"%s","<033>&a2650h+0V")
+  Writefile(L_FILE_NAME,"%s","2")
+  Writefile(L_FILE_NAME,"%s","<033>&a4500h+0V")
+  Writefile(L_FILE_NAME,"%s","3")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+20V<033>*c4a499b0P")   --left vertical line
+  Writefile(L_FILE_NAME,"%s","<033>&a1600h+0V<033>*c4a499b0P")   --right vertical
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+0V<033>*c1400h8v0P") --top horizontal line to
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+1200V<033>*c1400h8v0P") --bottom horizontal line
+
+  Writefile(L_FILE_NAME,"%s","<033>&a2000h-1200V<033>*c4a500b0P")   --left vertical line
+  Writefile(L_FILE_NAME,"%s","<033>&a3400h-0V<033>*c4a500b0P")   --right vertical
+  Writefile(L_FILE_NAME,"%s","<033>&a2000h-0V<033>*c1400h8v0P") --top horizontal line to
+  Writefile(L_FILE_NAME,"%s","<033>&a2000h+1200V<033>*c1400h8v0P") --bottom horizontal line
+
+  Writefile(L_FILE_NAME,"%s","<033>&a3800h-1200V<033>*c4a500b0P")   --left vertical li
+  Writefile(L_FILE_NAME,"%s","<033>&a5200h-0V<033>*c4a500b0P")   --right vertical
+  Writefile(L_FILE_NAME,"%s","<033>&a3800h-0V<033>*c1400h8v0P") --top horizontal line to
+  Writefile(L_FILE_NAME,"%s","<033>&a3800h+1200V<033>*c1400h8v0P") --bottom horizontal line
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+180V")
+  Writefile(L_FILE_NAME,"%s","Description of Breaks, Cracks or Damage")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","Plate Number")
+  Writefile(L_FILE_NAME,"%s","<033>&a1250h+0V")
+  Writefile(L_FILE_NAME,"%s","Description")
+  l_line_counter = 37
+
+    if cppglass:no_plates not one of 0 then
+      {
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%n",cppglass:no_plates)
+      }
+    For l_loop = 1 to 2
+      {
+        if cppglass:description[l_loop] <> "" then
+          {
+            L_FONT             = l_arial_9
+            L_V_POSITION       = "+0"
+            L_H_POSITION       = "1200"
+            L_CHARACTER_STRING = cppglass:description[l_loop]
+            L_MAX_CHAR         = 90
+            include "line_spacing.inc"
+            l_line_counter = l_line_counter + 1
+          }
+         if l_line_counter > l_max_lines - 10 then
+           {
+              Writefile(L_FILE_NAME,"%s","<FF>")
+              l_line_counter = 0
+           }
+      }
+    Writefile(L_FILE_NAME,"%s","<FF>")
+
+  next cppglass
+}---while
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+End

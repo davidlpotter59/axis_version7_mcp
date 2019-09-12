@@ -1,0 +1,344 @@
+%%
+/*
+Date Written: June 23, 2003
+
+Name: mcp215_012005.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+06/23/2003            DWR
+01/08/2004            DWR       Completed data portion of form
+03/07/2007            JLB       New form edition
+===========================
+*/
+
+Program
+  Name = "mcp215_012005";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[16] = "mcp215_012005.cq";
+ String l_company_id;
+ String L_COPY_NAME[20] ;
+ Unsigned ascii number l_max_lines=60;
+ Unsigned Ascii Number L_YEAR[4];
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned ascii number l_found[1];
+ Unsigned Ascii Number L_ITEM_COUNTER;
+ Unsigned Ascii Number L_STATE[2]=0;
+ Unsigned Ascii Number L_LOOP;
+ wdate L_EFF_DATE;
+ Unsigned Ascii Number L_LINE_COUNTER;
+ Unsigned Ascii Number L_PAGE_NUMBER;
+
+   Include "csfonts.inc"
+   Include "swsut100.var"
+   Include "swsut200.var"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access SFPend_alias,
+   Set SFPend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access cppgeneral,
+   Set cppgeneral:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppgeneral:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppgeneral:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access cppendorse,
+   Set cppendorse:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppendorse:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppendorse:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access sfsline,
+   Set sfsline:line_of_business = sfpname:line_of_business,
+       sfsline:company_id       = sfpname:company_id,
+       sfsline:lob_subline      = "00", exact
+
+   Include "swsut100.inc"
+   I_CODE = "MCP215"
+   Include "swsut200.inc"
+
+While sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO and
+      sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR and
+      sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE
+{
+  If sfpend_alias:code = I_CODE then
+    {
+Access cppendorse,
+   Set cppendorse:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppendorse:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppendorse:END_SEQUENCE = SFPPRINT1:END_SEQUENCE,
+       cppendorse:prem_no      = sfpend_alias:prem_no,
+       cppendorse:build_no     = sfpend_alias:build_no, Generic
+
+        l_state            = cppgeneral:state
+        L_COMPANY_ID       = sfpname:COMPANY_ID
+        L_LINE_OF_BUSINESS = sfsline:rating_LINE_OF_BUSINESS
+
+        Access SFSOPTEND,
+           Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+               SFSOPTEND:STATE            = L_STATE,
+               SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+               SFSOPTEND:CODE             = I_CODE, generic
+
+        While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+              SFSOPTEND:STATE            = L_STATE and
+              SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+              SFSOPTEND:CODE             = I_CODE
+
+        {  --start of sfsoptend check
+          If (sfpname:eff_date >= sfsoptend:eff_date and
+             (sfpname:eff_date < sfsoptend:exp_date or
+              sfsoptend:exp_date = 0)) then
+            {
+              l_eff_date = sfsoptend:eff_date
+            }
+          next sfsoptend
+        }
+
+        Access SFSOPTEND,
+           Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+               SFSOPTEND:STATE            = L_STATE,
+               SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+               SFSOPTEND:CODE             = I_CODE,
+               SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+        If sfsoptend:edition <> 0 then
+          {
+            Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+            Writefile(L_FILE_NAME,"%s","<033>&a420h7080V")
+            Writefile(L_FILE_NAME,"%s","Ed. ")
+            Writefile(L_FILE_NAME,"%n",sfsoptend:edition)
+          }
+
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+        Writefile(L_FILE_NAME,"%s",l_copyright_6)
+        Writefile(L_FILE_NAME,"%s"," ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+        Writefile(L_FILE_NAME,"%s","<033>&a4300h120V")
+        Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+        Writefile(L_FILE_NAME,"%s"," ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+        Writefile(L_FILE_NAME,"%s","<NL>")
+
+        Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%s","DISTILLED SPIRITS LOSS SETTLEMENT CONDITION ")
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h+20V")
+        Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h-20V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s"," PART I")
+
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%s","This endorsement establishes market value loss settlement Conditions in connection with")
+        Writefile(L_FILE_NAME,"%s"," Part I G.  The required information may")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%s","be shown below or elsewhere in this policy.")
+
+        Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+        Writefile(L_FILE_NAME,"%s","The provisions of this endorsement apply only when the endorsement number is listed in the Declarations.")
+        Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%s","Except as provided below, all other provisions in this policy are unchanged.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+60V")
+        Writefile(L_FILE_NAME,"%s","<033>*c5400h8v0P") --Horizontal line
+
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+        Writefile(L_FILE_NAME,"%s","Policy # ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+        Writefile(L_FILE_NAME,"%n",sfpprint1:policy_no)
+
+        Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+240V")
+        Writefile(L_FILE_NAME,"%s","SCHEDULE")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%s","Number*")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%s","Location ")
+        Writefile(L_FILE_NAME,"%n",cppendorse:prem_no)
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%s","Building ")
+        Writefile(L_FILE_NAME,"%n",cppendorse:build_no)
+
+        Writefile(L_FILE_NAME,"%s","<033>&a200h3300V")
+        Writefile(L_FILE_NAME,"%s","* Item No. or Location/Building Nos. as Shown in the Declarations")
+
+        Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+180V")
+        Writefile(L_FILE_NAME,"%s","COVERAGE MODIFICATION")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a1100h+120V")
+        Writefile(L_FILE_NAME,"%s","A.")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+0V")
+        Writefile(L_FILE_NAME,"%s","We ")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s","determine the value of bottled distilled spirits at")
+        Writefile(L_FILE_NAME,"%s"," the market price as of the time and place of")
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+120V")
+        Writefile(L_FILE_NAME,"%s","loss, less discounts and expenses ")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","you ")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s","would otherwise have.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a1100h+180V")
+        Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+        Writefile(L_FILE_NAME,"%s","B.")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+0V")
+        Writefile(L_FILE_NAME,"%s","We")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s"," determine the value of bulk distilled spirits other than")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s"," irreplaceable bulk distilled spirits, ")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s","at")
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+120V")
+        Writefile(L_FILE_NAME,"%s","the bulk market price as of the time and place of loss, less discounts and expenses")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s"," you")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s"," would ")
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+120V")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s","otherwise have.")
+
+        Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a1100h+180V")
+        Writefile(L_FILE_NAME,"%s","C.")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+0V")
+        Writefile(L_FILE_NAME,"%s","We")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s"," determine the value of")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s"," older bulk distilled spirits")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s"," at the market price per proof gallon of")
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+120V")
+        Writefile(L_FILE_NAME,"%s","equivalent bottled distilled spirits as of the time and place of loss, less: unpaid taxes; paid or")
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+120V")
+        Writefile(L_FILE_NAME,"%s","determined taxes that are refundable under the Internal Revenue Code; and charges and expenses")
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+120V")
+        Writefile(L_FILE_NAME,"%s","of converting bulk distilled")
+        Writefile(L_FILE_NAME,"%s"," spirits to bottled distilled spirits.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a1100h+180V")
+        Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+        Writefile(L_FILE_NAME,"%s","D.")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+0V")
+        Writefile(L_FILE_NAME,"%s","We")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s"," determine the value of")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s"," younger bulk distilled spirits")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s"," at the bulk market price of new distilled")
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+120V")
+        Writefile(L_FILE_NAME,"%s","spirits of like kind and quality in accordance with Paragraph B, plus pro rata the difference")
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+120V")
+        Writefile(L_FILE_NAME,"%s","between such value and the market price of such bulk distilled spirits at attained age in")
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+120V")
+        Writefile(L_FILE_NAME,"%s","accordance with Paragraph C.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+240V")
+        Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+        Writefile(L_FILE_NAME,"%s","DEFINITIONS")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a1100h+120V")
+        Writefile(L_FILE_NAME,"%s","Irreplaceable bulk distilled spirits ")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s","are: aged in wood cooperage, not replaceable with like kind and")
+        Writefile(L_FILE_NAME,"%s","<033>&a1100h+120V")
+        Writefile(L_FILE_NAME,"%s","quality, and held by ")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","you ")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s","as a distiller for sale as bottled goods.")
+
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a1100h+160V")
+        Writefile(L_FILE_NAME,"%s","Older bulk distilled spirits ")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s","means ")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","irreplaceable bulk distilled spirits")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s"," of an attained age equivalent to")
+        Writefile(L_FILE_NAME,"%s","<033>&a1100h+120V")
+        Writefile(L_FILE_NAME,"%s","the weighted average age of bottled distilled spirits into ")
+        Writefile(L_FILE_NAME,"%s","which such")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s"," irreplaceable bulk distilled spirits")
+        Writefile(L_FILE_NAME,"%s","<033>&a1100h+120V")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s","would have ")
+        Writefile(L_FILE_NAME,"%s","been converted.")
+
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a1100h+160V")
+        Writefile(L_FILE_NAME,"%s","Younger bulk distilled spirits ")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s","means all ")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","irreplaceable bulk ")
+        Writefile(L_FILE_NAME,"%s","distilled spirits ")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s","other than ")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","older bulk ")
+        Writefile(L_FILE_NAME,"%s","<033>&a1100h+120V")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","distilled spirits.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+240V")
+        Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+        Writefile(L_FILE_NAME,"%s","ADDITIONAL CONDITION")
+        Writefile(L_FILE_NAME,"%s","<033>&a1100h+120V")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s","Common Condition 12 extends to any rights to recover prepaid duties or taxes, to the extent included")
+        Writefile(L_FILE_NAME,"%s","<033>&a1100h+120V")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s","in ")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","our ")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s","payment. ")
+
+        Writefile(L_FILE_NAME,"%s","<FF>")
+    }
+  next sfpend_alias
+}
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+End

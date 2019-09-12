@@ -1,0 +1,1441 @@
+%%
+/*
+Date Written: December 15, 2010
+
+Name: mfp033_082010.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+12/15/2010          JLB           New version  of form
+===========================
+*/
+
+Program
+  Name = "mfp033_082010";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[16] = "mfp033_082010.cq";
+ string l_company_id[10],
+        l_sfplocation_zip;
+ Unsigned Ascii Number L_PAGE_NUMBER;
+ Unsigned Ascii Number L_PAGE_COUNTER,
+                       l_loop[4];
+ wdate l_eff_date;
+ unsigned ascii number l_state[2];
+ unsigned ascii number l_line_of_business[4];
+
+   Include "csfonts.inc"
+   Include "swsut100.var"
+   Include "swsut200.var"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access SFPEND,
+   Set SFPEND:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPEND:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPEND:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access SFPlocation,
+   Set SFPlocation:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPlocation:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPlocation:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access cppfarm,
+   Set cppfarm:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppfarm:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppfarm:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access cppfarmsupp,
+   Set cppfarmsupp:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppfarmsupp:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppfarmsupp:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access sfsline,
+   Set sfsline:company_id            = sfpname:company_id,
+       sfsline:line_of_business      = sfpname:line_of_business,
+       sfsline:lob_subline           = "00", exact
+
+   Include "swsut100.inc"
+   I_CODE = "MFP033"
+   Include "swsut200.inc"
+ --Include "swsut300.var"
+
+
+While SFPEND:POLICY_NO    = SFPPRINT1:POLICY_NO And
+      SFPEND:POL_YEAR     = SFPPRINT1:POL_YEAR And
+      SFPEND:END_SEQUENCE = SFPPRINT1:END_SEQUENCE
+{
+  If SFPEND:CODE = I_CODE Then
+    {
+      l_state            = cppfarm:state
+      L_COMPANY_ID       = sfpname:COMPANY_ID
+      L_LINE_OF_BUSINESS = sfsline:rating_LINE_OF_BUSINESS
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE, generic
+
+       While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+             SFSOPTEND:STATE            = L_STATE and
+             SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+             SFSOPTEND:CODE             = I_CODE
+
+         {  --start of sfsoptend check
+           If (sfpname:eff_date >= sfsoptend:eff_date and
+              (sfpname:eff_date < sfsoptend:exp_date or
+               sfsoptend:exp_date = 0)) then
+             {
+               l_eff_date = sfsoptend:eff_date
+             }
+           next sfsoptend
+         }
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE,
+             SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+      If sfsoptend:edition <> 0 then
+        {
+          Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+          Writefile(L_FILE_NAME,"%s","<033>&a420h7080V")
+          Writefile(L_FILE_NAME,"%s","Ed. ")
+          Writefile(L_FILE_NAME,"%n",sfsoptend:edition)
+        }
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h120V")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+30V")
+      Writefile(L_FILE_NAME,"%s","<033>*c5200h8v0P") --Horizontal line
+      Writefile(L_FILE_NAME,"%s","<033>&a1400h+120V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+      Writefile(L_FILE_NAME,"%s","SUPPLEMENTAL DECLARATIONS")
+      Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+      Writefile(L_FILE_NAME,"%s","<033>*c125h8v0P")
+      Writefile(L_FILE_NAME,"%s","<033>&a+155h+30V")
+      Writefile(L_FILE_NAME,"%s","MFP 033 ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","08 10")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+40V")
+      Writefile(L_FILE_NAME,"%s","<033>*c5200h8v0P") --Horizontal line
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+100V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+      Writefile(L_FILE_NAME,"%s","The following special limits and rating factors apply to the designated coverages, in accordance with the provisions of General Farm")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+      Writefile(L_FILE_NAME,"%s","Property Form MFP 032.")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+40V")
+      Writefile(L_FILE_NAME,"%s","<033>*c5200h8v0P") --Horizontal line
+
+      Writefile(L_FILE_NAME,"%s","<033>&a3600h+140V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+      Writefile(L_FILE_NAME,"%s","A.")
+      Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+      Writefile(L_FILE_NAME,"%s","POLICY")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a4400h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+      Writefile(L_FILE_NAME,"%s","B.")
+      Writefile(L_FILE_NAME,"%s","<033>&a4600h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+      Writefile(L_FILE_NAME,"%s","REVISED POLICY")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a3550h+120V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","LIMIT / FACTOR")
+      Writefile(L_FILE_NAME,"%s","<033>&a4600h+0V")
+      Writefile(L_FILE_NAME,"%s","LIMIT / FACTOR")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+      Writefile(L_FILE_NAME,"%s","PART I B ")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+      Writefile(L_FILE_NAME,"%s","SUPPLEMENTAL COVERAGES ")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","Location ")
+      Writefile(L_FILE_NAME,"%n",sfplocation:prem_no)
+      Writefile(L_FILE_NAME,"%s","<033>&a1200h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","Building ")
+      Writefile(L_FILE_NAME,"%n",sfplocation:build_no)
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s",l_arial_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+0V")
+      Writefile(L_FILE_NAME,"%s",SFPLOCATION:ADDRESS)
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      For l_loop = 1 to 3
+        {
+          If SFPLOCATION:ADDRESS1[l_loop] <> "" Then
+            {
+              Writefile(L_FILE_NAME,"%s%s%s%s",l_arial_9,"<033>&a200h+0V",
+                       SFPLOCATION:ADDRESS1[l_loop],"<NL>")
+            }
+        }
+
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+0V")
+     Writefile(L_FILE_NAME,"%s",Trun(SFPLOCATION:CITY))
+     Writefile(L_FILE_NAME,"%s",", ")
+     Writefile(L_FILE_NAME,"%s",SFPLOCATION:STR_STATE)
+     Writefile(L_FILE_NAME,"%s"," ")
+     Writefile(L_FILE_NAME,"%s",L_SFPLOCATION_ZIP)
+
+     Access cpsfarmmiscrates,
+        Set cpsfarmmiscrates:company_id       = l_company_id ,
+            cpsfarmmiscrates:state            = l_state ,
+            cpsfarmmiscrates:line_of_business = l_line_of_business, generic
+
+     --***1. Automatic Increase/Peak Season***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","1. ")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","Automatic Increase / Peak Season")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s","A.")
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+     Writefile(L_FILE_NAME,"%s","Annual Inflation / Factors:")
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+120V")
+     Writefile(L_FILE_NAME,"%s","Coverage A")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a4200h+0V")
+     --Writefile(L_FILE_NAME,"%n",cppfarmsupp:inflation_guard[1])
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a3850h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+120V")
+     Writefile(L_FILE_NAME,"%s","Coverage B")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a4200h+0V")
+     --Writefile(L_FILE_NAME,"%n",cppfarmsupp:inflation_guard[2])
+     Writefile(L_FILE_NAME,"%s","<033>&a3850h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+120V")
+     Writefile(L_FILE_NAME,"%s","Coverage C")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3850h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a4200h+0V")
+     --Writefile(L_FILE_NAME,"%n",cppfarmsupp:inflation_guard[3])
+
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+120V")
+     Writefile(L_FILE_NAME,"%s","Coverage D")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3850h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a4200h+0V")
+     --Writefile(L_FILE_NAME,"%n",cppfarmsupp:inflation_guard[4])
+
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+120V")
+     Writefile(L_FILE_NAME,"%s","Coverage E")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3850h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a4200h+0V")
+     --Writefile(L_FILE_NAME,"%n",cppfarmsupp:inflation_guard[5])
+
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+150V")
+     Writefile(L_FILE_NAME,"%s","B.")
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+     Writefile(L_FILE_NAME,"%s","Peak Season Factors:")
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+120V")
+     Writefile(L_FILE_NAME,"%s","Coverage D")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3850h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+     Writefile(L_FILE_NAME,"%s","<033>&a4200h+0V")
+     --Writefile(L_FILE_NAME,"%n",cppfarmsupp:peak_season[1])
+
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+120V")
+     Writefile(L_FILE_NAME,"%s","Coverage E")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3850h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+     Writefile(L_FILE_NAME,"%s","<033>&a4200h+0V")
+     --Writefile(L_FILE_NAME,"%n",cppfarmsupp:peak_season[2])
+
+     --***2. Borrowed Agricultural Equipment***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","2. ")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+     Writefile(L_FILE_NAME,"%s","Borrowed Agricultural Equipment (When MFP 543 applies)")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:AGRIC_EQUIP_LIMIT,"ZZZ,ZZ9"))
+
+     Writefile(L_FILE_NAME,"%s","<033>&a5000h+0V")
+     --Writefile(L_FILE_NAME,"%n",cppfarmsupp:agric_equip_limit)
+
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     --***3. Building Code/ Law Coverage ***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","3. ")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","Building Code / Law Coverage")
+     Writefile(L_FILE_NAME,"%s","<033>&a3900h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s"," 0.")
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:BUILDING_CODE_PERCENT,"99"))
+
+     If CPSFARMMISCRATES:BUILDING_CODE_PERCENT <> cppFARMSUPP:BUILDING_CODE_PERCENT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s","0.")
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:BUILDING_CODE_PERCENT,"99"))
+       }
+
+     --***5. Consequent Loss ***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+180V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","5.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","Consequent Loss")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c50h8v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+75h+30V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","(Spoilage):**")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","1.")
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Loss of Utility Service")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:LOSS_UTILITY_LIMIT,"ZZZ,ZZ9"))
+
+     If CPSFARMMISCRATES:LOSS_UTILITY_LIMIT <> cppFARMSUPP:LOSS_UTILITY_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(CPpfarmsupp:LOSS_UTILITY_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+150V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","2.")
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Mechanical Breakdown")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:MECHANICAL_LIMIT,"ZZZ,ZZ9"))
+
+     If CPSFARMMISCRATES:MECHANICAL_LIMIT <> cppFARMSUPP:MECHANICAL_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:MECHANICAL_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     --***6. Credit Card***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","6.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","Credit Card / Forgery / Counterfeit ")
+     Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+     Writefile(L_FILE_NAME,"%s","Money")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:CREDIT_CARD_LIMIT,"ZZZ,ZZ9"))
+
+     If CPSFARMMISCRATES:CREDIT_CARD_LIMIT <> cppFARMSUPP:CREDIT_CARD_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:CREDIT_CARD_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     --***7. Debris Removal***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","7.")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Debris Removal:")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","B.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+     Writefile(L_FILE_NAME,"%s","Factor (Covered Loss Times)")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s","   0.25")
+     --Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:DEBRIS_FACTOR,"ZZ9"))
+
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+150V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","C.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+     Writefile(L_FILE_NAME,"%s","Additional Limit")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:DEBRIS_LIMIT,"ZZZ,ZZ9"))
+     If CPSFARMMISCRATES:DEBRIS_LIMIT <> cppFARMSUPP:DEBRIS_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:DEBRIS_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     --***8. Dwellings Loss of Use***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","8.")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+     Writefile(L_FILE_NAME,"%s","Dwellings ")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Loss of Use")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s","   0.")
+     Writefile(L_FILE_NAME,"%n",CPSFARMMISCRATES:LOSS_USE_PERCENT)
+
+     --***10. Farm extra Expense***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","10.")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Farm Extra Expense ")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:EXTRA_EXP_LIMIT,"ZZZ,ZZ9"))
+
+     If CPSFARMMISCRATES:EXTRA_EXP_LIMIT <> cppFARMSUPP:EXTRA_EXP_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:EXTRA_EXP_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     --***11. Farm Operations***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","11.")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Farm Operations Records")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:OPERATIONS_LIMIT,"ZZZ,ZZ9"))
+     If CPSFARMMISCRATES:OPERATIONS_LIMIT <> cppFARMSUPP:OPERATIONS_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:OPERATIONS_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     --***12. Farm Products***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+180V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","12.")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","Farm Products in the Open Factor")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s","   0.")
+     Writefile(L_FILE_NAME,"%n",CPSFARMMISCRATES:PRODUCTS_OPEN_PERCENT)
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s","Limit on any one ")
+     Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+     Writefile(L_FILE_NAME,"%s","stack ")
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","of fodder, hay or straw")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:PRODUCTS_OPEN_MAXIMUM,"ZZZ,ZZ9"))
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     --***13. Fire Expense**-
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","13.")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Fire Expense Coverages:")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","A.")
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Fire Department Service Charges")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:FIRE_DEPT_LIMIT,"ZZZ,ZZ9"))
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+150V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","B.")
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Fire Extinguisher Recharge Expense")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:FIRE_EXTINGUISHER,"ZZZ,ZZ9"))
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     --***14. Newly Acquired Property***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+180V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","14.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","Newly Acquired Property:")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","1.")
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Coverage C")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:NEWLY_ACQUIRED_COVC_LIMIT,"ZZZ,ZZ9"))
+
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+150V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","2.")
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Coverage D:")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","a.")
+     Writefile(L_FILE_NAME,"%s","<033>&a800h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Replacement Equipment, Machinery and Vehicles")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:NEWLY_ACQUIRED_COVD_LIMIT[1],"ZZZ,ZZ9"))
+
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","b.")
+     Writefile(L_FILE_NAME,"%s","<033>&a800h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Additional Equipment, Machinery and Vehicles")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:NEWLY_ACQUIRED_COVD_LIMIT[2],"ZZZ,ZZ9"))
+
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","c.")
+     Writefile(L_FILE_NAME,"%s","<033>&a800h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+     Writefile(L_FILE_NAME,"%s","Livestock ")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Limit Factor")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s","   0.")
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:NEWLY_ACQUIRED_FACTOR,"99"))
+
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     --***15. Pollution Clean Up Cost***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","15.")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Pollution Clean Up Cost")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:POLLUTION_LIMIT,"ZZZ,ZZ9"))
+
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     --***16. Private Light ***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","16.")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Private Light / Power Poles")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:LIGHT_POWER_LIMIT,"ZZZ,ZZ9"))
+
+     If CPSFARMMISCRATES:LIGHT_POWER_LIMIT <> cppFARMSUPP:LIGHT_POWER_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:LIGHT_POWER_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     --***17. Property Away***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+180V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","17.")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","Property Away From the ")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+     Writefile(L_FILE_NAME,"%s","Describe Premises:")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Miscellaneous Property Factor")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s","   0.25")
+     --Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:PROPERTY_AWAY_FACTOR[1],"99"))
+
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s",'"All Other" Property Factor')
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s","   0.10")
+     --Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:PROPERTY_AWAY_FACTOR[2],"99"))
+
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     --***18. Property With Common/Contract Carrier ***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","18.")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Property With a Common / Contract Carrier")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:CONTRACT_CARRIER_LIMIT,"ZZZ,ZZ9"))
+     If CPSFARMMISCRATES:CONTRACT_CARRIER_LIMIT <> cppFARMSUPP:CONTRACT_CARRIER_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:CONTRACT_CARRIER_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h7200V")
+     Writefile(L_FILE_NAME,"%s",L_COPYRIGHT_6)
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+     Writefile(L_FILE_NAME,"%s"," ")
+     Writefile(L_FILE_NAME,"%s","2010 MSO, Inc.")
+
+     Writefile(L_FILE_NAME,"%s","<FF>")
+
+     ----------page 2----------
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+140V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+     Writefile(L_FILE_NAME,"%s","A.")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+     Writefile(L_FILE_NAME,"%s","POLICY")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a4400h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+     Writefile(L_FILE_NAME,"%s","B.")
+     Writefile(L_FILE_NAME,"%s","<033>&a4600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+     Writefile(L_FILE_NAME,"%s","REVISED POLICY")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3550h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+     Writefile(L_FILE_NAME,"%s","LIMIT / FACTOR")
+     Writefile(L_FILE_NAME,"%s","<033>&a4600h+0V")
+     Writefile(L_FILE_NAME,"%s","LIMIT / FACTOR")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+     Writefile(L_FILE_NAME,"%s","PART I B ")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c50h8v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+75h+30V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+     Writefile(L_FILE_NAME,"%s","Continued")
+
+     --***20. Trees, Shrubs and plants***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","20.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","Trees, Shrubs and Plants")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","A.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+     Writefile(L_FILE_NAME,"%s","Decorative Trees, Shrubs, Plants and Lawns")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","1.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a800h+0V")
+     Writefile(L_FILE_NAME,"%s","Total")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c50h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+75h+30V")
+     Writefile(L_FILE_NAME,"%s","Per Occurrence")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:TREES_LIMIT,"ZZZ,ZZ9"))
+
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","2.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a800h+0V")
+     Writefile(L_FILE_NAME,"%s","Limit Per Tree, Shrub, or Plant")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:TREES_PER_PLANT,"ZZZ,ZZ9"))
+
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+150V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","B.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+     Writefile(L_FILE_NAME,"%s","Fallen Trees")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s","    500")
+
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+     Writefile(L_FILE_NAME,"%s","PART I F")
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+     Writefile(L_FILE_NAME,"%s","WATER DAMAGE")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c50h8v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+75h+30V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+     Writefile(L_FILE_NAME,"%s","Sewer / Drain BackUp")
+
+     --***11.B. Water Damage***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","11.B.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+     Writefile(L_FILE_NAME,"%s","When MCP 507 Applies:")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:WATER_DAMAGE_LIMIT,"ZZZ,ZZ9"))
+
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+     Writefile(L_FILE_NAME,"%s","PART I G")
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+     Writefile(L_FILE_NAME,"%s","SPECIAL LIMITS")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c105h8v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+135h+30V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+     Writefile(L_FILE_NAME,"%s","CONDITION 2.A")
+
+     --***6. Coverage B.***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","6.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","Coverage B")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a350h+120V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+     Writefile(L_FILE_NAME,"%s",l_bullet_6)
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a500h+0V")
+     Writefile(L_FILE_NAME,"%s","Campers and trailers (not used for farming operations or with watercraft)")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:CAMPERS_LIMIT,"ZZZ,ZZ9"))
+     If CPSFARMMISCRATES:CAMPERS_LIMIT <> cppFARMSUPP:CAMPERS_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:CAMPERS_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     Writefile(L_FILE_NAME,"%s","<033>&a350h+150V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+     Writefile(L_FILE_NAME,"%s",l_bullet_6)
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a500h+0V")
+     Writefile(L_FILE_NAME,"%s","Furs")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:FURS_LIMIT,"ZZZ,ZZ9"))
+     If CPSFARMMISCRATES:FURS_LIMIT <> cppFARMSUPP:FURS_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:FURS_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     Writefile(L_FILE_NAME,"%s","<033>&a350h+150V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+     Writefile(L_FILE_NAME,"%s",l_bullet_6)
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a500h+0V")
+     Writefile(L_FILE_NAME,"%s","Grave markers")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:GRAVE_MARKERS_LIMIT,"ZZZ,ZZ9"))
+     If CPSFARMMISCRATES:GRAVE_MARKERS_LIMIT <> cppFARMSUPP:GRAVE_MARKERS_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:GRAVE_MARKERS_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     Writefile(L_FILE_NAME,"%s","<033>&a350h+150V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+     Writefile(L_FILE_NAME,"%s",l_bullet_6)
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a500h+0V")
+     Writefile(L_FILE_NAME,"%s","Guns and accessories")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:GUNS_LIMIT,"ZZZ,ZZ9"))
+     If CPSFARMMISCRATES:GUNS_LIMIT <> cppFARMSUPP:GUNS_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:GUNS_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     Writefile(L_FILE_NAME,"%s","<033>&a350h+150V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+     Writefile(L_FILE_NAME,"%s",l_bullet_6)
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a500h+0V")
+     Writefile(L_FILE_NAME,"%s","Jewelry, watches, precious and semiprecious stones")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:JEWELRY_LIMIT,"ZZZ,ZZ9"))
+     If CPSFARMMISCRATES:JEWELRY_LIMIT <> cppFARMSUPP:JEWELRY_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:JEWELRY_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     Writefile(L_FILE_NAME,"%s","<033>&a350h+150V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+     Writefile(L_FILE_NAME,"%s",l_bullet_6)
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a500h+0V")
+     Writefile(L_FILE_NAME,"%s","Money")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:MONEY_LIMIT,"ZZZ,ZZ9"))
+     If CPSFARMMISCRATES:MONEY_LIMIT <> cppFARMSUPP:MONEY_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:MONEY_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     Writefile(L_FILE_NAME,"%s","<033>&a350h+150V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+     Writefile(L_FILE_NAME,"%s",l_bullet_6)
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a500h+0V")
+     Writefile(L_FILE_NAME,"%s","Property used or procured for use in business")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:BUS_PROP_LIMIT,"ZZZ,ZZ9"))
+     If CPSFARMMISCRATES:BUS_PROP_LIMIT <> cppFARMSUPP:BUS_PROP_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:BUS_PROP_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     Writefile(L_FILE_NAME,"%s","<033>&a500h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Only 15% of the limit can be applied to property off the ")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+     Writefile(L_FILE_NAME,"%s","described premises")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a350h+150V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+     Writefile(L_FILE_NAME,"%s",l_bullet_6)
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a500h+0V")
+     Writefile(L_FILE_NAME,"%s","Property in an apartment rented or held for rental to others")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:RENTAL_PROP_LIMIT,"ZZZ,ZZ9"))
+     If CPSFARMMISCRATES:RENTAL_PROP_LIMIT <> cppFARMSUPP:RENTAL_PROP_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:RENTAL_PROP_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     Writefile(L_FILE_NAME,"%s","<033>&a350h+150V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+     Writefile(L_FILE_NAME,"%s",l_bullet_6)
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a500h+0V")
+     Writefile(L_FILE_NAME,"%s","Securities")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:SECURITIES_LIMIT,"ZZZ,ZZ9"))
+     If CPSFARMMISCRATES:SECURITIES_LIMIT <> cppFARMSUPP:SECURITIES_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:SECURITIES_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     Writefile(L_FILE_NAME,"%s","<033>&a350h+150V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+     Writefile(L_FILE_NAME,"%s",l_bullet_6)
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a500h+0V")
+     Writefile(L_FILE_NAME,"%s","Silverware")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:SILVERWARE_LIMIT,"ZZZ,ZZ9"))
+     If CPSFARMMISCRATES:SILVERWARE_LIMIT <> cppFARMSUPP:SILVERWARE_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:SILVERWARE_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     Writefile(L_FILE_NAME,"%s","<033>&a350h+150V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+     Writefile(L_FILE_NAME,"%s",l_bullet_6)
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a500h+0V")
+     Writefile(L_FILE_NAME,"%s","Watercraft and their equipment, motors, parts, or trailers")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:WATERCRAFT_LIMIT,"ZZZ,ZZ9"))
+     If CPSFARMMISCRATES:WATERCRAFT_LIMIT <> cppFARMSUPP:WATERCRAFT_LIMIT then
+       {
+         Writefile(L_FILE_NAME,"%s",l_arial_9)
+         Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+         Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+         Writefile(L_FILE_NAME,"%s",str(cppFARMSUPP:WATERCRAFT_LIMIT,"ZZZ,ZZ9"))
+       }
+
+     --***8. Fodder, Hay, etc.***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","8.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a350h+0V")
+     Writefile(L_FILE_NAME,"%s","Fodder, Hay or Straw ")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+     Writefile(L_FILE_NAME,"%s","Stack ")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Limit")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:FODDER_LIMIT,"ZZZ,ZZ9"))
+
+     --***9. Glass***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","9.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","Glass:")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s","Limit")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:GLASS_LIMIT,"ZZZ,ZZ9"))
+
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s","Per Item Limit")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:GLASS_PER,"ZZZ,ZZ9"))
+
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     --***10. Livestock***--
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","10.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","Livestock")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s","a.")
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Per Head Limit")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c50h5v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+75h+30V")
+     Writefile(L_FILE_NAME,"%s","Coverage D")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:LIVESTOCK_LIMIT[1],"ZZZ,ZZ9"))
+
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s","b.")
+     Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Per Head Limit")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c50h5v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+75h+30V")
+     Writefile(L_FILE_NAME,"%s","Coverage E")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s","   0.25")
+     --Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:LIVESTOCK_LIMIT[2],"ZZZ,ZZ9"))
+
+     --***11. Miscellaneous Equipment***--
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","11.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","Miscellaneous Equipment")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:MISC_EQUIPMENT_LIMIT,"ZZZ,ZZ9"))
+
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+     Writefile(L_FILE_NAME,"%s","CONDITION 2.B")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","2.b.")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","Replacement Threshold")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:REPLACEMENT_THRESHOLD,"ZZZ,ZZ9"))
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+     Writefile(L_FILE_NAME,"%s","Special Condition (D/E):")
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","Limit")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:SPECIAL_COND_LIMIT,"ZZZ,ZZ9"))
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","Factor")
+     Writefile(L_FILE_NAME,"%s","<033>&a3600h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+     Writefile(L_FILE_NAME,"%s","$")
+     Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+     Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+     Writefile(L_FILE_NAME,"%s","   0.05")
+     --Writefile(L_FILE_NAME,"%s",str(CPSFARMMISCRATES:SPECIAL_COND_FACTOR,"99"))
+
+     Writefile(L_FILE_NAME,"%s",l_arial_9)
+     Writefile(L_FILE_NAME,"%s","<033>&a4860h+0V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c75h3v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_8)
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+     Writefile(L_FILE_NAME,"%s","NOTES:")
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+     Writefile(L_FILE_NAME,"%s",l_bullet_6)
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","With the exception of Supplemental Coverages 4 (Item 2) and 14, the limits and factored amounts of insurance are aggregate limits per")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+120V")
+     Writefile(L_FILE_NAME,"%s","occurrence.  With regard to 4 (Item 2) and 14 the limits are aggregate limits per policy year for all covered occurrences.")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+     Writefile(L_FILE_NAME,"%s",l_bullet_6)
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s",'Column A shows Basic Policy Limits / Factors: a dash "')
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c105h6v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+135h+30V")
+     Writefile(L_FILE_NAME,"%s",'" means coverage not applicable.')
+
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+     Writefile(L_FILE_NAME,"%s",l_bullet_6)
+     Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s",'Column B shows the Revised Limits / Factors, which replaces those shown in Column A: a dash "')
+     Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+     Writefile(L_FILE_NAME,"%s","<033>*c105h6v0P")
+     Writefile(L_FILE_NAME,"%s","<033>&a+135h+30V")
+     Writefile(L_FILE_NAME,"%s",'" means no change permitted.')
+
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_8)
+     Writefile(L_FILE_NAME,"%s","<033>&a235h+150V")
+     Writefile(L_FILE_NAME,"%s","*")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","Applicable only if MFP 543 is listed in the Declarations.")
+
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_8)
+     Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+     Writefile(L_FILE_NAME,"%s","**")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+     Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+     Writefile(L_FILE_NAME,"%s","Coverage may be deleted by showing zero dollars ($0) in Column (B).")
+
+     Writefile(L_FILE_NAME,"%s","<033>&a2800h7000V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_7)
+     Writefile(L_FILE_NAME,"%s","- 2 -")
+
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_7)
+     Writefile(L_FILE_NAME,"%s","<033>&a5000h7000V")
+     Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+     Writefile(L_FILE_NAME,"%s"," ")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_7)
+     Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+     Writefile(L_FILE_NAME,"%s","<FF>")
+    }
+  Next SFPEND
+}
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+End

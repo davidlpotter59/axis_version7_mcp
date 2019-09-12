@@ -1,0 +1,333 @@
+%%
+/*
+Date Written: November 21, 2002
+
+Name: mcp174_102004.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+11/21/2002             JER                 Wrote form template
+                                           Data fields need to be added
+
+10/17/2002             RMG
+03/07/2007             JLB                 new form edition
+===========================
+*/
+
+Program
+  Name = "mcp174_102004";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_file_name[16] = "mcp174_102004.cq";
+ String l_company_id;
+ String L_COPY_NAME[20] ;
+ Unsigned ascii number l_max_lines=60;
+ Unsigned Ascii Number L_YEAR[4];
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned ascii number l_found[1];
+ Unsigned Ascii Number L_ITEM_COUNTER;
+ Unsigned Ascii Number L_STATE[2]=0;
+ Unsigned Ascii Number L_LOOP;
+ wdate L_EFF_DATE;
+ Unsigned Ascii Number L_LINE_COUNTER;
+ Unsigned Ascii Number L_PAGE_NUMBER;
+
+   Include "csfonts.inc"
+   Include "swsut100.var"
+   Include "swsut200.var"
+
+Initialization
+  Deletefile (L_file_name);
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic;
+
+Access sfpend_alias,
+   Set sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic;
+
+Access cppcrime,
+   Set cppcrime:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppcrime:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppcrime:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic;
+
+Access cppcrime1,
+   Set cppcrime1:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppcrime1:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppcrime1:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic;
+
+Access SFSLINE,
+   Set SFSLINE:COMPANY_ID       = SFPNAME:COMPANY_ID,
+       SFSLINE:LINE_OF_BUSINESS = SFPNAME:LINE_OF_BUSINESS,
+       sfsline:lob_subline      = "00", exact
+
+Update
+
+   Include "swsut100.inc"
+   I_code = "MCP174"
+   Include "swsut200.inc"
+
+While cppcrime1:POLICY_NO      = SFPPRINT1:POLICY_NO And
+      cppcrime1:POL_YEAR       = SFPPRINT1:POL_YEAR And
+      cppcrime1:END_SEQUENCE   = SFPPRINT1:END_SEQUENCE
+{
+  If cppcrime1:code = I_CODE then
+    {
+      If sfpmaster:state <> 0 then
+        {
+          l_state            = sfpmaster:state
+        }
+      If cppcrime1:state <> 0 then
+        {
+          l_state = cppcrime1:state
+        }
+      L_COMPANY_ID       = sfpname:COMPANY_ID
+      L_LINE_OF_BUSINESS = sfsline:rating_LINE_OF_BUSINESS
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE, generic
+
+       While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+             SFSOPTEND:STATE            = L_STATE and
+             SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+             SFSOPTEND:CODE             = I_CODE
+
+         {  --start of sfsoptend check
+           If (sfpname:eff_date >= sfsoptend:eff_date and
+              (sfpname:eff_date < sfsoptend:exp_date or
+               sfsoptend:exp_date = 0)) then
+             {
+               l_eff_date = sfsoptend:eff_date
+             }
+           next sfsoptend
+         }
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE,
+             SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+      If sfsoptend:edition <> 0 then
+        {
+          Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+          Writefile(L_FILE_NAME,"%s","<033>&a420h7080V")
+          Writefile(L_FILE_NAME,"%s","Ed. ")
+          Writefile(L_FILE_NAME,"%n",sfsoptend:edition)
+        }
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_file_name,"%s","<033>&a200h7100V")
+      Writefile(L_file_name,"%s",L_copyright_6)
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+
+      Writefile(L_file_name,"%s",L_arial_bold_12)
+      Writefile(L_file_name,"%s","<033>&a4300h120V")
+      Writefile(L_file_name,"%s",Trun(SFSOPTEND:FORM_PRINT))
+      Writefile(L_file_name,"%s"," ")
+      Writefile(L_file_name,"%s",L_arial_bold_9)
+      Writefile(L_file_name,"%s",SFSOPTEND:EDITION_PRINT)
+      Writefile(L_file_name,"%s","<NL>")
+
+      Writefile(L_file_name,"%s","<033>&a200h+120V")
+      Writefile(L_file_name,"%s",L_arial_bold_9)
+      Writefile(L_file_name,"%s","<033>&a200h+0V")
+      Writefile(L_file_name,"%s","REDUCED LIMIT WHEN ")
+      Writefile(L_file_name,"%s",L_arial_italic_bold_9)
+      Writefile(L_file_name,"%s","PREMISES ")
+      Writefile(L_file_name,"%s",L_arial_bold_9)
+      Writefile(L_file_name,"%s","CLOSED FOR BUSINESS")
+      Writefile(L_file_name,"%s","<033>&a+30h+14V")
+      Writefile(L_file_name,"%s",l_bullet_6)
+      Writefile(L_file_name,"%s","<033>&a+30h-14V")
+      Writefile(L_file_name,"%s",L_arial_bold_9)
+      Writefile(L_file_name,"%s","PART I")
+      Writefile(L_file_name,"%s",L_arial_italic_9)
+      Writefile(L_file_name,"%s","<033>&a200h+120V")
+      Writefile(L_file_name,"%s","This endorsement together with the Crime Common Provisions form establishes a reduced limit for inside the premises money")
+      Writefile(L_file_name,"%s", "<033>&a200h+120V")
+      Writefile(L_file_name,"%s","and securities coverage when the premises is not open for business.  The required information may be shown below or elsewhere")
+      Writefile(L_file_name,"%s", "<033>&a200h+120V")
+      Writefile(L_file_name,"%s",L_arial_italic_9)
+      Writefile(L_file_name,"%s","in this policy.")
+      Writefile(L_file_name,"%s",L_arial_bold_9)
+      Writefile(L_file_name,"%s","<033>&a200h+160V")
+      Writefile(L_file_name,"%s","The provisions of this endorsement apply only when the endorsement number is listed in the Declarations.")
+      Writefile(L_file_name,"%s","<033>&a200h+120V")
+      Writefile(L_file_name,"%s","Except as provided below, all other provisions in this policy are unchanged.")
+      Writefile(L_file_name,"%s","<033>&a200h+60V<033>*c5400h8v0P")
+
+      Writefile(L_file_name,"%s",L_arial_9)
+      Writefile(L_file_name,"%s","<033>&a200h+180V")
+      Writefile(L_file_name,"%s","Policy # ")
+      Writefile(L_file_name,"%s",L_arial_bold_9)
+      Writefile(L_file_name,"%n",sfpprint1:policy_no)
+      Writefile(L_file_name,"%s","<033>&a200h+180V")
+      Writefile(L_file_name,"%s","SCHEDULE")
+
+      Writefile(L_file_name,"%s", L_arial_bold_9)
+      Writefile(L_file_name,"%s","<033>&a200h+120V")
+      Writefile(L_file_name,"%s","Number*")
+      Writefile(L_file_name,"%s","<033>&a4050h+0V")
+      Writefile(L_file_name,"%s","Limit")
+
+      Writefile(L_file_name,"%s", L_push)
+      Writefile(L_file_name,"%s","<033>&a200h+120V")
+      Writefile(L_file_name,"%s","Location ")
+      Writefile(L_file_name,"%n",cppcrime1:prem_no)
+      Writefile(L_file_name,"%s","<033>&a200h+120V")
+      Writefile(L_file_name,"%s", L_arial_bold_9)
+      Writefile(L_file_name,"%s","Building ")
+      Writefile(L_file_name,"%n",cppcrime1:build_no)
+
+      Writefile(L_file_name,"%s", L_pop)
+      Writefile(L_file_name,"%s","<033>&a4050h+120V")
+      Writefile(L_file_name,"%s", L_arial_9)
+      Writefile(L_file_name,"%s","$ ")
+
+      Access cppcrime,
+         Set cppcrime:policy_NO    = cppcrime1:policy_no,
+             cppcrime:pol_year     = cppcrime1:pol_year,
+             cppcrime:end_sequence = cppcrime1:end_sequence,
+             cppcrime:prem_no      = cppcrime1:prem_no,
+             cppcrime:build_no     = cppcrime1:build_no, generic
+
+       While cppcrime:policy_NO    = cppcrime1:policy_no and
+             cppcrime:pol_year     = cppcrime1:pol_year and
+             cppcrime:end_sequence = cppcrime1:end_sequence
+      {
+        If cppcrime:limit[3] <> 0 then
+          {
+            Writefile(L_file_name,"%s",l_letter_gothic_bold_10)
+            Writefile(L_file_name,"%s",str(cppcrime:limit[3],"ZZ,ZZZ,ZZZ"))
+          }
+        next cppcrime
+      }
+
+      Writefile(L_file_name,"%s",L_arial_bold_9)
+      Writefile(L_file_name,"%s","<033>&a200h3400V")
+      Writefile(L_file_name,"%s","* Item No. or Location / Building No. as Shown in the Declarations.")
+      Writefile(L_file_name,"%s","<033>&a200h+200V")
+
+      Writefile(L_file_name,"%s",L_arial_bold_9)
+      Writefile(L_file_name,"%s","<033>&a200h+0V")
+      Writefile(L_file_name,"%s","COVERAGE MODIFICATION")
+
+      Writefile(L_file_name,"%s",L_arial_9)
+      Writefile(L_file_name,"%s","<033>&a1200h+120V")
+      Writefile(L_file_name,"%s","With regard to the described")
+      Writefile(L_file_name,"%s", L_arial_italic_9)
+      Writefile(L_file_name,"%s"," premises ")
+      Writefile(L_file_name,"%s",L_arial_9)
+      Writefile(L_file_name,"%s","shown in the Schedule, the Limit of Liability shown in the")
+
+      Writefile(L_file_name,"%s","<033>&a1200h+120V")
+      Writefile(L_file_name,"%s","Crime Declarations for Inside the")
+      Writefile(L_file_name,"%s", L_arial_italic_9)
+      Writefile(L_file_name,"%s"," Premises Money")
+      Writefile(L_file_name,"%s",L_arial_9)
+      Writefile(L_file_name,"%s"," and ")
+      Writefile(L_file_name,"%s", L_arial_italic_9)
+      Writefile(L_file_name,"%s","Securities ")
+      Writefile(L_file_name,"%s",L_arial_9)
+      Writefile(L_file_name,"%s","coverage (MCP 173) is reduced to")
+
+      Writefile(L_file_name,"%s","<033>&a1200h+120V")
+      Writefile(L_file_name,"%s","the limit shown in this endorsement (MCP 174) while such")
+      Writefile(L_file_name,"%s", L_arial_italic_9)
+      Writefile(L_file_name,"%s"," premises")
+      Writefile(L_file_name,"%s",L_arial_9)
+      Writefile(L_file_name,"%s"," are closed for business and a")
+
+      Writefile(L_file_name,"%s","<033>&a1200h+120V")
+      Writefile(L_file_name,"%s", L_arial_italic_9)
+      Writefile(L_file_name,"%s","custodian ")
+      Writefile(L_file_name,"%s",L_arial_9)
+      Writefile(L_file_name,"%s","is not on duty.")
+
+      Writefile(L_file_name,"%s",L_arial_bold_9)
+      Writefile(L_file_name,"%s","<033>&a200h+240V")
+      Writefile(L_file_name,"%s","ADDITIONAL DEFINITIONS")
+
+      Writefile(L_file_name,"%s",L_arial_bold_9)
+      Writefile(L_file_name,"%s","<033>&a1200h+120V")
+      Writefile(L_file_name,"%s","1.")
+      Writefile(L_file_name,"%s",L_arial_italic_9)
+      Writefile(L_file_name,"%s","<033>&a1400h+0V")
+      Writefile(L_file_name,"%s","Custodian ")
+      Writefile(L_file_name,"%s", L_arial_9)
+      Writefile(L_file_name,"%s","means ")
+      Writefile(L_file_name,"%s",L_arial_italic_9)
+      Writefile(L_file_name,"%s","you, ")
+      Writefile(L_file_name,"%s", L_arial_9)
+      Writefile(L_file_name,"%s", "any of ")
+      Writefile(L_file_name,"%s",L_arial_italic_9)
+      Writefile(L_file_name,"%s","your ")
+      Writefile(L_file_name,"%s", L_arial_9)
+      Writefile(L_file_name,"%s","partners or any ")
+      Writefile(L_file_name,"%s",L_arial_italic_9)
+      Writefile(L_file_name,"%s","employee ")
+      Writefile(L_file_name,"%s",L_arial_9)
+      Writefile(L_file_name,"%s","while having care and custody of the")
+
+      Writefile(L_file_name,"%s","<033>&a1400h+120V")
+      Writefile(L_file_name,"%s","subject property inside the")
+      Writefile(L_file_name,"%s", L_arial_italic_9)
+      Writefile(L_file_name,"%s"," premises, ")
+      Writefile(L_file_name,"%s",L_arial_9)
+      Writefile(L_file_name,"%s","other than while acting as a janitor or watchperson.  A")
+
+      Writefile(L_file_name,"%s","<033>&a1400h+120V")
+      Writefile(L_file_name,"%s","watchperson means any person")
+      Writefile(L_file_name,"%s", L_arial_italic_9)
+      Writefile(L_file_name,"%s"," you ")
+      Writefile(L_file_name,"%s",L_arial_9)
+      Writefile(L_file_name,"%s","retain specifically to have care and custody of property inside")
+
+      Writefile(L_file_name,"%s","<033>&a1400h+120V")
+      Writefile(L_file_name,"%s", L_arial_9)
+      Writefile(L_file_name,"%s","the ")
+      Writefile(L_file_name,"%s", L_arial_italic_9)
+      Writefile(L_file_name,"%s","premises ")
+      Writefile(L_file_name,"%s",L_arial_9)
+      Writefile(L_file_name,"%s","and who has no other duties.")
+
+      Writefile(L_file_name,"%s",L_arial_bold_9)
+      Writefile(L_file_name,"%s","<033>&a1200h+180V")
+      Writefile(L_file_name,"%s","2.")
+      Writefile(L_file_name,"%s",L_arial_italic_9)
+      Writefile(L_file_name,"%s","<033>&a1400h+0V")
+      Writefile(L_file_name,"%s","Premises ")
+      Writefile(L_file_name,"%s", L_arial_9)
+      Writefile(L_file_name,"%s","means the interior of that portion of any building ")
+      Writefile(L_file_name,"%s",L_arial_italic_9)
+      Writefile(L_file_name,"%s","you, ")
+      Writefile(L_file_name,"%s", L_arial_9)
+      Writefile(L_file_name,"%s","occupy in conducting ")
+      Writefile(L_file_name,"%s",L_arial_italic_9)
+      Writefile(L_file_name,"%s","your ")
+      Writefile(L_file_name,"%s","<033>&a1400h+120V")
+      Writefile(L_file_name,"%s", L_arial_9)
+      Writefile(L_file_name,"%s","business. ")
+      Writefile(L_file_name,"%s","<FF>")
+    }
+  next cppcrime1
+}
+Screen Exit
+Writefile(L_file_name, "%s%s", L_formfeed, L_reset )
+Closefile(L_file_name)
+End

@@ -1,0 +1,307 @@
+%%
+/*
+Date Written: June 17, 2003
+
+Name: mcp355_012005.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+06/17/2003            DWR
+03/08/2007            JLB              New form edition
+===========================
+*/
+
+Program
+  Name = "mcp355_012005";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[16] = "mcp355_012005.cq";
+ String l_company_id;
+ String L_COPY_NAME[20] ;
+ Unsigned ascii number l_max_lines=60;
+ Unsigned Ascii Number L_YEAR[4];
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned ascii number l_found[1];
+ Unsigned Ascii Number L_ITEM_COUNTER;
+ Unsigned Ascii Number L_STATE[2]=0;
+ Unsigned Ascii Number L_LOOP;
+ wdate L_EFF_DATE;
+ Unsigned Ascii Number L_LINE_COUNTER;
+ Unsigned Ascii Number L_PAGE_NUMBER;
+
+   Include "csfonts.inc"
+   Include "swsut100.var"
+   Include "swsut200.var"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+access cppbusiness,
+   set cppbusiness:policy_no    = sfpprint1:policy_no,
+       cppbusiness:pol_year     = sfpprint1:pol_year,
+       cppbusiness:end_sequence = sfpprint1:end_sequence, generic
+
+Access SFSLINE,
+   Set SFSLINE:COMPANY_ID       = SFPNAME:COMPANY_ID,
+       SFSLINE:LINE_OF_BUSINESS = SFPNAME:LINE_OF_BUSINESS,
+       sfsline:lob_subline      = "00", exact
+
+   Include "swsut100.inc"
+   I_CODE = "MCP355"
+   Include "swsut200.inc"
+
+  If sfpmaster:state <> 0 then
+    {
+      L_STATE            = sfpmaster:STATE
+    }
+  If cppbusiness:state <> 0 then
+    {
+      l_state = cppbusiness:state
+    }
+  L_COMPANY_ID       = sfpname:COMPANY_ID
+
+  l_line_of_business = sfsline:rating_line_of_business
+
+  Access SFSOPTEND,
+     Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+         SFSOPTEND:STATE            = L_STATE,
+         SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+         SFSOPTEND:CODE             = I_CODE, generic
+
+  While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+        SFSOPTEND:STATE            = L_STATE and
+        SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+        SFSOPTEND:CODE             = I_CODE
+
+  {  --start of sfsoptend check
+    If (sfpname:eff_date >= sfsoptend:eff_date and
+       (sfpname:eff_date < sfsoptend:exp_date or
+                           sfsoptend:exp_date = 0)) then
+      {
+        l_eff_date = sfsoptend:eff_date
+      }
+    next sfsoptend
+  }
+
+  Access SFSOPTEND,
+     Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+         SFSOPTEND:STATE            = L_STATE,
+         SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+         SFSOPTEND:CODE             = I_CODE,
+         SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+  If sfsoptend:edition <> 0 then
+    {
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a420h7080V")
+      Writefile(L_FILE_NAME,"%s","Ed. ")
+      Writefile(L_FILE_NAME,"%n",sfsoptend:edition)
+    }
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+  Writefile(L_FILE_NAME,"%s",l_copyright_6)
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a4300h120V")
+  Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+  Writefile(L_FILE_NAME,"%s","EXTRA EXPENSE")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+  Writefile(L_FILE_NAME,"%s","<033>*c105h8v0P")
+  Writefile(L_FILE_NAME,"%s","<033>&a+135h+30V")
+  Writefile(L_FILE_NAME,"%s","MONTHLY RECOVERY LIMITATION ")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h+20V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-20V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s"," PART I")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","This endorsement establishes a four month recovery limit in connection with Coverage D.2.")
+
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+  Writefile(L_FILE_NAME,"%s","The provisions of this endorsement apply only when the endorsement number is listed in the Declarations.")
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","Except as provided below, all other provisions in this policy are unchanged.")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+60V")
+  Writefile(L_FILE_NAME,"%s","<033>*c5400h8v0p") --Horizontal line
+  Writefile(L_FILE_NAME,"%s","")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+  Writefile(L_FILE_NAME,"%s","Policy # ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+  Writefile(L_FILE_NAME,"%n",sfpprint1:policy_no)
+
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+240V")
+  Writefile(L_FILE_NAME,"%s","SCHEDULE")
+
+  Writefile(L_FILE_NAME,"%s",l_push)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","Number*")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","Location ")
+  Writefile(L_FILE_NAME,"%n",cppbusiness:prem_no)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","Building ")
+  Writefile(L_FILE_NAME,"%n",cppbusiness:build_no)
+
+  Writefile(L_FILE_NAME,"%s",l_pop)
+  Writefile(L_FILE_NAME,"%s","<033>&a3200h+120V")
+  Writefile(L_FILE_NAME,"%s","Factor Set ")
+  Writefile(L_FILE_NAME,"%s","<033>&a3200h+120V")
+  Writefile(L_FILE_NAME,"%n",cppbusiness:recovery_set)
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+400V")
+  Writefile(L_FILE_NAME,"%s"," *Item No. or Location / Building Nos. as Shown in the Declarations.")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+180V")
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","COVERAGE MODIFICATION")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","Part I G is Amended as Follows:")
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","Condition 2. B is supplemented by the following Condition.")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+240V")
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","ADDITIONAL CONDITION")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","Our ")
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","maximum liability for Extra Expense is further limited.  The most ")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","we ")
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","pay for such ")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","covered loss ")
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","is ")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","limited to the product of (a) times (b), subject to the incurred Extra Expense, where: (a) is the")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","applicable Limit of Liability shown in the Declarations and (b) is the applicable factor shown in the")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","Factor Set indicated as applicable in the Declarations for the Basic Period of Indemnity (Coverage D ")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","Condition C.1) during which such expense is incurred.")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+180V")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","For example, if the limit is $100,000, the Period of Indemnity is 45 days, the monthly maximum")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","recovery limit for 45 days is 80% (.80), and the incurred Extra Expense is $85,000: the most we pay is")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","$80,000")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+  Writefile(L_FILE_NAME,"%s","<033>*c105h6v0P")
+  Writefile(L_FILE_NAME,"%s","<033>&a+135h+30V")
+  Writefile(L_FILE_NAME,"%s","and the remaining loss of $5,000 is not covered by this policy.")
+
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+160V")
+  Writefile(L_FILE_NAME,"%s","This endorsement provides for full recovery when the Period of Indemnity exceeds 90 days, with")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","recovery limited during a lesser period pursuant to the indicated monthly recovery factor.")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a3350h+120V")
+  Writefile(L_FILE_NAME,"%s","Factor Set*")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","Period of Indemnity")
+  Writefile(L_FILE_NAME,"%s","<033>&a2700h+0V")
+  Writefile(L_FILE_NAME,"%s","3")
+  Writefile(L_FILE_NAME,"%s","<033>&a3550h+0V")
+  Writefile(L_FILE_NAME,"%s","4")
+  Writefile(L_FILE_NAME,"%s","<033>&a4500h+0V")
+  Writefile(L_FILE_NAME,"%s","5")
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","30 days or less")
+  Writefile(L_FILE_NAME,"%s","<033>&a2550h+0V")
+  Writefile(L_FILE_NAME,"%s","30% ( .30)")
+  Writefile(L_FILE_NAME,"%s","<033>&a3400h+0V")
+  Writefile(L_FILE_NAME,"%s","25% ( .25)")
+  Writefile(L_FILE_NAME,"%s","<033>&a4350h+0V")
+  Writefile(L_FILE_NAME,"%s","20% ( .20)")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","31 to 60 days")
+  Writefile(L_FILE_NAME,"%s","<033>&a2550h+0V")
+  Writefile(L_FILE_NAME,"%s","60% ( .60)")
+  Writefile(L_FILE_NAME,"%s","<033>&a3400h+0V")
+  Writefile(L_FILE_NAME,"%s","50% ( .50)")
+  Writefile(L_FILE_NAME,"%s","<033>&a4350h+0V")
+  Writefile(L_FILE_NAME,"%s","40% ( .40)")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","61 days to 90 days")
+  Writefile(L_FILE_NAME,"%s","<033>&a2550h+0V")
+  Writefile(L_FILE_NAME,"%s","90% ( .90)")
+  Writefile(L_FILE_NAME,"%s","<033>&a3400h+0V")
+  Writefile(L_FILE_NAME,"%s","75% ( .75)")
+  Writefile(L_FILE_NAME,"%s","<033>&a4350h+0V")
+  Writefile(L_FILE_NAME,"%s","80% ( .80)")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","91 days or more")
+  Writefile(L_FILE_NAME,"%s","<033>&a2500h+0V")
+  Writefile(L_FILE_NAME,"%s","100% (1.00)")
+  Writefile(L_FILE_NAME,"%s","<033>&a3350h+0V")
+  Writefile(L_FILE_NAME,"%s","100% (1.00)")
+  Writefile(L_FILE_NAME,"%s","<033>&a4300h+0V")
+  Writefile(L_FILE_NAME,"%s","100% (1.00)")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+240V")
+  Writefile(L_FILE_NAME,"%s","*")
+  Writefile(L_FILE_NAME,"%s","<033>&a1400h+0V")
+  Writefile(L_FILE_NAME,"%s","Either indicate the applicable Factor Set in the Declarations or list actual recovery limits (such as")
+  Writefile(L_FILE_NAME,"%s","<033>&a1400h+120V")
+  Writefile(L_FILE_NAME,"%s","20%")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+  Writefile(L_FILE_NAME,"%s","<033>*c105h6v0P")
+  Writefile(L_FILE_NAME,"%s","<033>&a+135h+30V")
+  Writefile(L_FILE_NAME,"%s","40%")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+  Writefile(L_FILE_NAME,"%s","<033>*c105h6v0P")
+  Writefile(L_FILE_NAME,"%s","<033>&a+135h+30V")
+  Writefile(L_FILE_NAME,"%s","80%")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+  Writefile(L_FILE_NAME,"%s","<033>*c105h6v0P")
+  Writefile(L_FILE_NAME,"%s","<033>&a+135h+30V")
+  Writefile(L_FILE_NAME,"%s","100%).")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","<FF>")
+
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+End

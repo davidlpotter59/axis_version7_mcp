@@ -1,0 +1,15 @@
+#!/bin/bash
+
+DESTINATION=/software/source/cvs_projects/davep/axis/version7_other/quote
+cp mcp011_082010.sd $DESTINATION
+cp mcp015_082010.sd $DESTINATION
+cp mcp107_012005.sd $DESTINATION
+cp mcp201a_091999.sd  $DESTINATION
+cp mcp601a_012005.sd  $DESTINATION
+ 
+# AXIS
+# SIIL-7001 $DESTINATION
+# SICPDS08 $DESTINATION
+# SICP7004 $DESTINATION
+# SIBU0001 $DESTINATION
+

@@ -1,0 +1,264 @@
+%%
+/*
+Date Written: May 11, 2009
+
+Name: mcp702d_082007.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+05/11/2009            JLB             New form mcp702d_082007
+
+===========================
+*/
+
+Program
+  Name = "mcp702d_082007";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[17] = "mcp702d_082007.cq";
+ String l_company_id[10];
+ Unsigned ascii number L_PAGE_COUNTER,
+                       l_max_lines,
+                       l_form[1],
+                       l_state[2]=0,
+                       l_line_of_business,
+                       l_line_counter;
+
+ wdate l_eff_date;
+
+   Include "csfonts.inc"
+   Include "swsut100.var"
+   Include "swsut200.var"
+ --Include "swsut300.var"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access scpcontractor,
+   Set scpcontractor:POLICY_NO     = SFPPRINT1:POLICY_NO,
+       scpcontractor:POL_YEAR      = SFPPRINT1:POL_YEAR,
+       scpcontractor:END_SEQUENCE  = SFPPRINT1:END_SEQUENCE, Generic
+
+   Include "swsut100.inc"
+   I_CODE = "MCP702D"
+   Include "swsut200.inc"
+
+l_page_counter = 1
+
+        l_state            = scpcontractor:state
+        L_COMPANY_ID       = sfpname:COMPANY_ID
+        L_LINE_OF_BUSINESS = sfpname:LINE_OF_BUSINESS
+
+        Access SFSEND,
+           Set SFSEND:COMPANY_ID       = L_COMPANY_ID,
+               SFSEND:STATE            = L_STATE,
+               SFSEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+               SFSEND:FORM             = L_FORM,
+               SFSEND:CODE             = I_CODE, generic
+
+         While SFSEND:COMPANY_ID       = L_COMPANY_ID and
+               SFSEND:STATE            = L_STATE and
+               SFSEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+               SFSEND:FORM             = L_FORM AND
+               SFSEND:CODE             = I_CODE
+
+           {  --start of SFSEND check
+             If (sfpname:eff_date >= SFSEND:eff_date and
+                (sfpname:eff_date < SFSEND:exp_date or
+                 SFSEND:exp_date = 0)) then
+               {
+                 l_eff_date = SFSEND:eff_date
+               }
+             next SFSEND
+           }
+
+        Access SFSEND,
+           Set SFSEND:COMPANY_ID       = L_COMPANY_ID,
+               SFSEND:STATE            = L_STATE,
+               SFSEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+               SFSEND:FORM             = L_FORM,
+               SFSEND:CODE             = I_CODE,
+               SFSEND:EFF_DATE         = L_EFF_DATE, exact
+
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+        Writefile(L_FILE_NAME,"%s","<033>&a4300h120V")
+        Writefile(L_FILE_NAME,"%s","MCP 702D")
+        Writefile(L_FILE_NAME,"%s"," ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","08 07")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","BUILDING CODE / LAW COVERAGE MODIFICATION")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+130V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","This endorsement revises how the limits of coverage are determined.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+130V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+        Writefile(L_FILE_NAME,"%s","The provisions of this endorsement apply only when the endorsement number is listed in the Declarations.")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+130V")
+        Writefile(L_FILE_NAME,"%s","Except as provided below, all other provisions in this policy are unchanged.")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+40V")
+        Writefile(L_FILE_NAME,"%s","<033>*c5200h8v0p") --Horizontal line
+
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+240V")
+        Writefile(L_FILE_NAME,"%s","COVERAGE MODIFICATION")
+        Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+        Writefile(L_FILE_NAME,"%s","Section A of the Building Code / Law Supplemental Coverage is replaced by the following:")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","A.")
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","Coverage A is extended to cover the following losses or expenses that ensue as a direct consequence of")
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","covered loss ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","at the described premises.  The losses or expenses covered under Item A.1 are included")
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+        Writefile(L_FILE_NAME,"%s","within the Coverage A limit of liability for the subject property.  This Supplemental Coverage does not")
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+        Writefile(L_FILE_NAME,"%s","provide an additional amount of insurance.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","We  ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","cover the expenses under Items A.2 and 3 for an amount determined by applying the applicable")
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+        Writefile(L_FILE_NAME,"%s","factor shown in the Supplemental Declarations to the Coverage A limit for the subject property: the")
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+        Writefile(L_FILE_NAME,"%s","product is the specific limit for Items A.2 and 3 combined.  If this policy is insured on a blanket basis")
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+        Writefile(L_FILE_NAME,"%s","(where more than one building or property is insured under a single limit of liability), the amount of")
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+        Writefile(L_FILE_NAME,"%s","coverage is determined by applying the applicable factor to an amount that is the greater of:")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+        Writefile(L_FILE_NAME,"%s","1.")
+        Writefile(L_FILE_NAME,"%s","<033>&a1550h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","The Coverage A replacement cost value for the specific property subject to the ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","covered loss ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","as ")
+        Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+        Writefile(L_FILE_NAME,"%s","reported to ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","us  ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","in the Statement of Values on record with ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","us")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","; or")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+        Writefile(L_FILE_NAME,"%s","2.")
+        Writefile(L_FILE_NAME,"%s","<033>&a1550h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","The actual Coverage A replacement cost at the time of loss for such property.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+150V")
+        Writefile(L_FILE_NAME,"%s","The losses or expenses covered are:  ")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+        Writefile(L_FILE_NAME,"%s","1.")
+        Writefile(L_FILE_NAME,"%s","<033>&a1550h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","The loss caused by enforcement of any building, land use, or zoning code / law in force the date of")
+        Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+        Writefile(L_FILE_NAME,"%s","the ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","covered loss")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s",", that:")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+        Writefile(L_FILE_NAME,"%s","a.")
+        Writefile(L_FILE_NAME,"%s","<033>&a1750h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","Requires the demolition of parts of the same property not damaged by a covered cause of loss.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a1550h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+        Writefile(L_FILE_NAME,"%s","b.")
+        Writefile(L_FILE_NAME,"%s","<033>&a1750h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","Regulates the construction or repair of buildings, or establishes building, land use or zoning")
+        Writefile(L_FILE_NAME,"%s","<033>&a1750h+120V")
+        Writefile(L_FILE_NAME,"%s","requirements at the described premises.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+        Writefile(L_FILE_NAME,"%s","2.")
+        Writefile(L_FILE_NAME,"%s","<033>&a1550h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","The increased expense ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","you ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","incur to construct, rebuild, or repair the property caused by enforcement")
+        Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+        Writefile(L_FILE_NAME,"%s","of building, land use, or zoning code / law in force on the date of the ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","covered loss")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s",": the property")
+        Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+        Writefile(L_FILE_NAME,"%s","must be intended for the same use / occupancy as the current property unless otherwise prohibited")
+        Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+        Writefile(L_FILE_NAME,"%s","by such code / law.  ")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+        Writefile(L_FILE_NAME,"%s","3.")
+        Writefile(L_FILE_NAME,"%s","<033>&a1550h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","The expense ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","you ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","incur to demolish undamaged parts of property and clear the site of such parts")
+        Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+        Writefile(L_FILE_NAME,"%s","caused by enforcement of building, land use, or zoning code / law in force on the date of the")
+        Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+        Writefile(L_FILE_NAME,"%s","covered loss.  ")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+150V")
+        Writefile(L_FILE_NAME,"%s","If MCP 504 is listed in the Declarations, then Coverage D is extended, as to the Coverage Period, to the")
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+        Writefile(L_FILE_NAME,"%s","increased period of time required to comply with the conditions described in the preceding Item 1.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a200h7200V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+        Writefile(L_FILE_NAME,"%s",L_copyright_8)
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+        Writefile(L_FILE_NAME,"%s"," 2007 MSO, Inc.")
+
+        Writefile(L_FILE_NAME,"%s","<FF>")
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+End

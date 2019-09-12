@@ -1,0 +1,312 @@
+%%
+/*
+Date Written: July 17, 2003
+
+Name: mcp341_012005.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+07/17/2003            DWR       Initial Setup
+01/14/2004            DWR       Form Completion
+03/01/2007              JLB       New form edition
+===========================
+*/
+
+Program
+  Name = "mcp341_012005";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[16] = "mcp341_012005.cq";
+ String l_company_id;
+ String L_COPY_NAME[20] ,
+        l_font[35];
+ Unsigned ascii number l_max_lines=60;
+ Unsigned Ascii Number L_YEAR[4];
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned ascii number l_found[1];
+ Unsigned Ascii Number L_ITEM_COUNTER;
+ Unsigned Ascii Number L_STATE[2]=0;
+ Unsigned Ascii Number L_LOOP;
+ wdate L_EFF_DATE;
+ Unsigned Ascii Number L_LINE_COUNTER;
+ Unsigned Ascii Number L_PAGE_NUMBER;
+
+   Include "csfonts.inc"
+   Include "swsut100.var"
+   Include "swsut200.var"
+   Include "line_spacing.var"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access cppbuspayroll,
+   Set cppbuspayroll:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppbuspayroll:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppbuspayroll:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access cppbusiness,
+   Set cppbusiness:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppbusiness:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppbusiness:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access sfsline,
+   Set sfsline:line_of_business = sfpname:line_of_business,
+       sfsline:company_id       = sfpname:company_id,
+       sfsline:lob_subline      = "00", exact
+
+   Include "swsut100.inc"
+   I_CODE = "MCP341"
+   Include "swsut200.inc"
+
+While cppbuspayroll:POLICY_NO    = SFPPRINT1:POLICY_NO And
+      cppbuspayroll:POL_YEAR     = SFPPRINT1:POL_YEAR And
+      cppbuspayroll:END_SEQUENCE = SFPPRINT1:END_SEQUENCE
+{
+  If sfpmaster:state <> 0 then
+    {
+      L_STATE            = sfpmaster:STATE
+    }
+  If cppbusiness:state <> 0 then
+    {
+      l_state = cppbusiness:state
+    }
+  L_COMPANY_ID       = sfpname:COMPANY_ID
+  L_LINE_OF_BUSINESS = sfsline:rating_LINE_OF_BUSINESS
+
+  Access SFSOPTEND,
+     Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+         SFSOPTEND:STATE            = L_STATE,
+         SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+         SFSOPTEND:CODE             = I_CODE, generic
+
+  While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+        SFSOPTEND:STATE            = L_STATE and
+        SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+        SFSOPTEND:CODE             = I_CODE
+
+  {  --start of sfsoptend check
+    If (sfpname:eff_date >= sfsoptend:eff_date and
+       (sfpname:eff_date < sfsoptend:exp_date or
+                           sfsoptend:exp_date = 0)) then
+      {
+        l_eff_date = sfsoptend:eff_date
+      }
+    next sfsoptend
+  }
+
+  Access SFSOPTEND,
+     Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+         SFSOPTEND:STATE            = L_STATE,
+         SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+         SFSOPTEND:CODE             = I_CODE,
+         SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+  If sfsoptend:edition <> 0 then
+    {
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a420h7080V")
+      Writefile(L_FILE_NAME,"%s","Ed. ")
+      Writefile(L_FILE_NAME,"%n",sfsoptend:edition)
+    }
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+  Writefile(L_FILE_NAME,"%s",l_copyright_6)
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a4300h120V")
+  Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","BUSINESS INCOME")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+  Writefile(L_FILE_NAME,"%s","<033>*c100h3v0P")
+  Writefile(L_FILE_NAME,"%s","<033>&a+130h+30V")
+  Writefile(L_FILE_NAME,"%s","ORDINARY PAYROLL LIMITATION ")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h+14V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-14V")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s"," PART I")
+
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","This endorsement establishes recovery limits on ordinary payroll expense in connection with Coverage D. 1. MCP 341 applies")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","when all such expense is deleted.  The required information may be shown below or elsewhere in this policy.")
+
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+  Writefile(L_FILE_NAME,"%s","The provisions of this endorsement apply only when the endorsement number is listed in the Declarations.")
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","Except as provided below, all other provisions in this policy are unchanged.")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+40V")
+  Writefile(L_FILE_NAME,"%s","<033>*c5200h5v0P") --Horizontal line
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+180V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","Policy # ")
+  Writefile(L_FILE_NAME,"%n",sfpprint1:policy_no)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+240V")
+  Writefile(L_FILE_NAME,"%s","SCHEDULE")
+  Writefile(L_FILE_NAME,"%s","<033>&a2250h+140V")
+  Writefile(L_FILE_NAME,"%s","Other Exemptions")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","Number*")
+  Writefile(L_FILE_NAME,"%s","<033>&a1740h+0V")
+  Writefile(L_FILE_NAME,"%s","Job Classification")
+  Writefile(L_FILE_NAME,"%s","<033>&a4050h+0V")
+  Writefile(L_FILE_NAME,"%s","Employee(s)")
+
+  Writefile(L_FILE_NAME,"%s",l_push)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+  Writefile(L_FILE_NAME,"%s","Location ")
+  Writefile(L_FILE_NAME,"%n",cppbuspayroll:prem_no)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","Building ")
+  Writefile(L_FILE_NAME,"%n",cppbuspayroll:build_no)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+
+  Writefile(L_FILE_NAME,"%s",l_pop)
+  Writefile(L_FILE_NAME,"%s",l_push)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+  L_FONT             = l_arial_9
+  L_V_POSITION       = "+0"
+  L_H_POSITION       = "1150"
+  L_CHARACTER_STRING = cppbuspayroll:job_classification
+  L_MAX_CHAR         = 40
+  include "line_spacing.inc"
+
+  Writefile(L_FILE_NAME,"%s",l_pop)
+  Writefile(L_FILE_NAME,"%s","<033>&a4000h+140V")
+
+  L_FONT             = l_arial_9
+  L_V_POSITION       = "+0"
+  L_H_POSITION       = "3500"
+  L_CHARACTER_STRING = cppbuspayroll:employees
+  L_MAX_CHAR         = 40
+  include "line_spacing.inc"
+
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h3200V")
+  Writefile(L_FILE_NAME,"%s","* Item No. or Location/Building Nos. as Shown in the Declarations")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","COVERAGE MODIFICATION")
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s","Business Income does not cover ")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","ordinary payroll expense ")
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","in connection with the described premises")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s","shown in the Schedule.")
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+180V")
+  Writefile(L_FILE_NAME,"%s","ADDITIONAL CONDITION")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s","Coinsurance Condition I G. 2. F. is amended by the following:")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","For purposes of coinsurance, ")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","we ")
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","determine operating expenses for the year deleting ")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","ordinary payroll ")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","expense.")
+
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+180V")
+  Writefile(L_FILE_NAME,"%s","ADDITIONAL DEFINITIONS")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s","The following special definitions apply:")
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","Ordinary payroll expense ")
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","includes the following when paid by ")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","you ")
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","to ")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","your ")
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","employees (other than to")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s","described ")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","exempted employees):")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s",l_bullet)
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1360h+0V")
+  Writefile(L_FILE_NAME,"%s"," Employee benefits directly related to payroll")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s",l_bullet)
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1360h+0V")
+  Writefile(L_FILE_NAME,"%s"," FICA payments")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+130V")
+  Writefile(L_FILE_NAME,"%s",l_bullet)
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1360h+0V")
+  Writefile(L_FILE_NAME,"%s"," Payroll")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+130V")
+  Writefile(L_FILE_NAME,"%s",l_bullet)
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1360h+0V")
+  Writefile(L_FILE_NAME,"%s"," Union dues")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+130V")
+  Writefile(L_FILE_NAME,"%s",l_bullet)
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1360h+0V")
+  Writefile(L_FILE_NAME,"%s"," Workers compensation premiums")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+180V")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","Exempted Employees ")
+  Writefile(L_FILE_NAME,"%s",l_arial_9)
+  Writefile(L_FILE_NAME,"%s","means department managers, employees under contract, executives and officers")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s","and other employees exempted as listed by job classification or employee(s) in the Schedule.")
+  Writefile(L_FILE_NAME,"%s","<FF>")
+  Next cppbuspayroll
+}
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+End

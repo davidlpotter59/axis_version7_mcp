@@ -1,0 +1,304 @@
+%%
+/*
+Date Written: December 17, 2003
+
+Name: mcp119_012005.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+12/17/2003            JS         Formatted initial form
+12/17/2003            DWR        Data entry and finalization of form
+02/28/2007            JLB        New form edition
+===========================
+*/
+
+Program
+  Name = "mcp119_012005";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[16] = "mcp119_012005.cq";
+ String L_COPY_NAME[20] ;
+ String L_COMPANY_ID ,
+        l_font[35];
+ Unsigned ascii number l_max_lines=60;
+ Unsigned Ascii Number L_YEAR[4];
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned ascii number l_found[1];
+ Unsigned Ascii Number L_ITEM_COUNTER;
+ Unsigned Ascii Number L_STATE[2]=0;
+ Unsigned Ascii Number L_LOOP;
+ wdate L_EFF_DATE;
+ Unsigned Ascii Number L_LINE_COUNTER;
+ Unsigned Ascii Number L_PAGE_NUMBER;
+
+   Include "csfonts.inc"
+   Include "swsut100.var"
+   Include "swsut200.var"
+   Include "line_spacing.var"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access cppgeneral,
+   Set cppgeneral:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppgeneral:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppgeneral:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access cppearthquake,
+   Set cppearthquake:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       cppearthquake:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       cppearthquake:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access SFSLINE,
+   Set SFSLINE:COMPANY_ID       = SFPNAME:COMPANY_ID,
+       SFSLINE:LINE_OF_BUSINESS = SFPNAME:LINE_OF_BUSINESS,
+       sfsline:lob_subline      = "00", exact
+
+   Include "swsut100.inc"
+   I_CODE = "MCP119"
+   Include "swsut200.inc"
+   Include "line_spacing.inc"
+
+  If sfpmaster:state <> 0 then
+    {
+      L_STATE            = sfpmaster:STATE
+    }
+  If cppgeneral:state <> 0 then
+    {
+      l_state = cppgeneral:state
+    }
+  L_COMPANY_ID       = sfpname:COMPANY_ID
+  L_LINE_OF_BUSINESS = sfsline:rating_LINE_OF_BUSINESS
+
+  Access SFSOPTEND,
+     Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+         SFSOPTEND:STATE            = L_STATE,
+         SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+         SFSOPTEND:CODE             = I_CODE, generic
+
+  While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+        SFSOPTEND:STATE            = L_STATE and
+        SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+        SFSOPTEND:CODE             = I_CODE
+
+  {  --start of sfsoptend check
+    If (sfpname:eff_date >= sfsoptend:eff_date and
+       (sfpname:eff_date < sfsoptend:exp_date or
+                           sfsoptend:exp_date = 0)) then
+      {
+        l_eff_date = sfsoptend:eff_date
+      }
+    next sfsoptend
+  }
+
+  Access SFSOPTEND,
+     Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+         SFSOPTEND:STATE            = L_STATE,
+         SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+         SFSOPTEND:CODE             = I_CODE,
+         SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+  If sfsoptend:edition <> 0 then
+    {
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a420h7080V")
+        Writefile(L_FILE_NAME,"%s","Ed. ")
+        Writefile(L_FILE_NAME,"%n",sfsoptend:edition)
+    }
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+  Writefile(L_FILE_NAME,"%s",l_copyright_6)
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a4300h120V")
+  Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","EARTHQUAKE COVERAGE")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+  Writefile(L_FILE_NAME,"%s","<033>*c105h6v0P")
+  Writefile(L_FILE_NAME,"%s","<033>&a+135h+30V")
+  Writefile(L_FILE_NAME,"%s","OPTION 6")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h+14V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-14V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s"," PART I")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","This endorsement establishes the provisions for Earthquake as an additional covered Cause of Loss. The required information")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","may be shown below or elsewhere in this policy.")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+  Writefile(L_FILE_NAME,"%s","The provisions of this endorsement apply only when the endorsement number is listed in the Declarations.")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","Except as provided below, all other provisions in this policy are unchanged.")
+  Writefile(L_FILE_NAME,"%s","<033>&a120h+40V<033>*c5255h5v0P")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+  Writefile(L_FILE_NAME,"%s","Policy # ")
+  Writefile(L_FILE_NAME,"%n",sfpprint1:policy_no)
+  Writefile(L_FILE_NAME,"%s","<033>&a400h+160V")
+  Writefile(L_FILE_NAME,"%s",l_letter_gothic_bold_10)
+  Writefile(L_FILE_NAME,"%s",str(cppearthquake:deductible,"ZZ,ZZZ"))
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+0V")
+  Writefile(L_FILE_NAME,"%s","< Deductible Factor")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+900V")
+  Writefile(L_FILE_NAME,"%s","COVERAGE MODIFICATION")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s","Part I C is extended to include Cause of Loss Option 6 covering the following:")
+  Writefile(L_FILE_NAME,"%s","<033>&a1100h+120V")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h+14V")
+  Writefile(L_FILE_NAME,"%s", L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-14V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1300h+0V")
+  Writefile(L_FILE_NAME,"%s","Earthquake")
+  Writefile(L_FILE_NAME,"%s","<033>&a1100h+140V")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h+14V")
+  Writefile(L_FILE_NAME,"%s", L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-14V")
+  Writefile(L_FILE_NAME,"%s","<033>&a1300h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","Volcanic Activity, meaning the effusion, eruptions, or explosions of a volcano other than that")
+  Writefile(L_FILE_NAME,"%s","<033>&a1300h+120V")
+  Writefile(L_FILE_NAME,"%s","described as included in Volcanic Eruption.")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+160V")
+  Writefile(L_FILE_NAME,"%s","All Earthquake shocks or Volcanic Activity that take place within a continuous 168 hour period are")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s","considered a single occurrence and constitute a single loss.")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+160V")
+  Writefile(L_FILE_NAME,"%s","Unless MCP 519 is listed in the Declarations, MCP 119 does not apply to Sprinkler Leakage loss")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s","arising out of Earthquake or Volcanic Activity.")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+220V")
+  Writefile(L_FILE_NAME,"%s","ADDITIONAL CONDITIONS")
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+120V")
+  Writefile(L_FILE_NAME,"%s","A. ")
+  Writefile(L_FILE_NAME,"%s","<033>&a1350h+0V")
+  Writefile(L_FILE_NAME,"%s","Deductible")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+  Writefile(L_FILE_NAME,"%s","The Deductible amount otherwise applicable to this policy is replaced by the following in")
+  Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+  Writefile(L_FILE_NAME,"%s","connection with Earthquake or Volcanic Activity loss:")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+  Writefile(L_FILE_NAME,"%s","1.")
+  Writefile(L_FILE_NAME,"%s","<033>&a1550h+0V")
+  Writefile(L_FILE_NAME,"%s","Coverage A/B/C")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+  Writefile(L_FILE_NAME,"%s","The Deductible amounts are the product of (a) times (b) where (a) is the Deductible factor")
+  Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+  Writefile(L_FILE_NAME,"%s","shown for MCP 119 and (b) is the specific value of each of the following items at the time of")
+  Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+  Writefile(L_FILE_NAME,"%s","loss at the subject described premises: the separate specific value of each building; the")
+  Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+  Writefile(L_FILE_NAME,"%s","specific value of the contents of each separate building; the specific value of personal")
+  Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+  Writefile(L_FILE_NAME,"%s","property in the open in each yard.")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1550h+160V")
+  Writefile(L_FILE_NAME,"%s","We")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s"," apply the separate Deductible amounts (determined for each building, the contents of")
+  Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+  Writefile(L_FILE_NAME,"%s","each separate building,and personal property in the open) to the loss to each such separate")
+  Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+  Writefile(L_FILE_NAME,"%s","item.")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s"," We")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s"," are liable only for such")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s"," covered loss,")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s"," in connection with each separate item, in")
+  Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+  Writefile(L_FILE_NAME,"%s","excess of the applicable Deductible.")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1350h+160V")
+  Writefile(L_FILE_NAME,"%s","2.")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1550h+0V")
+  Writefile(L_FILE_NAME,"%s","Coverage D")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+  Writefile(L_FILE_NAME,"%s","We")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s"," are liable only for such")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s"," covered loss")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s"," that")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s"," you")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s"," incur after the first 168 consecutive hours")
+  Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+  Writefile(L_FILE_NAME,"%s","following")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s"," direct covered loss")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s"," arising out of Earthquake or Volcanic Activity.  But this")
+  Writefile(L_FILE_NAME,"%s","<033>&a1550h+120V")
+  Writefile(L_FILE_NAME,"%s","coverage limitation applies only if the subject building is 5 or more stories in height.")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+220V")
+  Writefile(L_FILE_NAME,"%s","B.")
+  Writefile(L_FILE_NAME,"%s","<033>&a1350h+0V")
+  Writefile(L_FILE_NAME,"%s","Property Limitation")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+  Writefile(L_FILE_NAME,"%s","We")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s"," do not cover loss to masonry veneer (except stucco) over wood frame.  But this does not apply")
+  Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+  Writefile(L_FILE_NAME,"%s","if less than 10% of the exterior of the subject building is masonry veneer or the description of the")
+  Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+  Writefile(L_FILE_NAME,"%s",'subject building in the Declarations states "including masonry veneer."')
+  Writefile(L_FILE_NAME,"%s","<033>&a1350h+160V")
+  Writefile(L_FILE_NAME,"%s","The value of such veneer is not used in determination of the Deductible amount described above")
+  Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+  Writefile(L_FILE_NAME,"%s","or in connection with Coinsurance Condition I G. 2. E.")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1150h+220V")
+  Writefile(L_FILE_NAME,"%s","C.")
+  Writefile(L_FILE_NAME,"%s","<033>&a1350h+0V")
+  Writefile(L_FILE_NAME,"%s","Time of Attachment")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+  Writefile(L_FILE_NAME,"%s","Coverage does not begin until 168 hours after the effective date of this Endorsement, unless such")
+  Writefile(L_FILE_NAME,"%s","<033>&a1350h+120V")
+  Writefile(L_FILE_NAME,"%s","is concurrent with the effective date of this policy.")
+  Writefile(L_FILE_NAME,"%s","<FF>")
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+End

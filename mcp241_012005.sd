@@ -1,0 +1,566 @@
+%%
+/*
+Date Written: May 18, 2006
+
+Name: mcp241_012005.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+03/24/2006            DWR     new form Version with New naming convention
+05/08/2007            JLB     Cleaned up
+===========================
+*/
+
+Program
+  Name = "mcp241_012005";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[16] = "mcp241_012005.cq";
+ String L_COPY_NAME[20] ,
+        l_font[35];
+ Unsigned ascii number l_max_lines;
+ Unsigned Ascii Number L_YEAR[4];
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned ascii number l_found[1];
+ Unsigned Ascii Number L_ITEM_COUNTER;
+ Unsigned Ascii Number L_STATE[2]=0;
+ Unsigned Ascii Number L_LOOP;
+ wdate L_EFF_DATE;
+ Unsigned Ascii Number L_LINE_COUNTER;
+ Unsigned Ascii Number L_PAGE_NUMBER;
+
+   Include "csfonts.inc"
+   Include "swsut100.var"
+   Include "swsut200.var"
+   Include "swsut300.var"
+   Include "line_spacing.var"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+access sfpmaster,
+   set sfpmaster:policy_no = sfpprint1:policy_no,
+       sfpmaster:pol_year = sfpprint1:pol_year,
+       sfpmaster:end_sequence = sfpprint1:end_sequence, generic
+
+Access scpprotective,
+   Set scpprotective:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       scpprotective:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       scpprotective:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access scpprotect,
+   Set scpprotect:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       scpprotect:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       scpprotect:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access scpcontractor,
+   Set scpcontractor:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       scpcontractor:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       scpcontractor:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access sfsline,
+   Set sfsline:company_id            = sfpname:company_id,
+       sfsline:line_of_business      = sfpname:line_of_business,
+       sfsline:lob_subline           = "00", exact
+
+Access sfpend_alias,
+   Set sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+   Include "swsut100.inc"
+   I_CODE = "MCP241"
+   Include "swsut200.inc"
+   Include "line_spacing.inc"
+
+If sfsline:lob_code one of "PROPERTY", "LIABILITY", "SMP", "CINLAND" then
+do cpp
+
+If sfsline:lob_code one of "SCP" then
+do scp
+
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+
+Procedure definition
+
+Procedure cpp
+Begin
+While sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO And
+      sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR And
+      sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE
+  {
+    If sfpend_alias:CODE = I_CODE Then
+      {
+        L_STATE            = sfpmaster:STATE
+        L_COMPANY_ID       = sfpname:COMPANY_ID
+        L_LINE_OF_BUSINESS = sfsline:rating_line_of_business
+
+        Access SFSOPTEND,
+           Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+               SFSOPTEND:STATE            = L_STATE,
+               SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+               SFSOPTEND:CODE             = I_CODE, generic
+
+         While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+               SFSOPTEND:STATE            = L_STATE and
+               SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+               SFSOPTEND:CODE             = I_CODE
+
+           {  --start of sfsoptend check
+             If (sfpname:eff_date >= sfsoptend:eff_date and
+                (sfpname:eff_date < sfsoptend:exp_date or
+                 sfsoptend:exp_date = 0)) then
+               {
+                 l_eff_date = sfsoptend:eff_date
+               }
+             next sfsoptend
+           }
+        Access SFSOPTEND,
+           Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+               SFSOPTEND:STATE            = L_STATE,
+               SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+               SFSOPTEND:CODE             = I_CODE,
+               SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+        If sfsoptend:edition <> 0 then
+          {
+            Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+            Writefile(L_FILE_NAME,"%s","<033>&a420h7080V")
+            Writefile(L_FILE_NAME,"%s","Ed. ")
+            Writefile(L_FILE_NAME,"%n",sfsoptend:edition)
+          }
+
+        Access cppendorse,
+            Set cppendorse:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+                cppendorse:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+                cppendorse:END_SEQUENCE = SFPPRINT1:END_SEQUENCE,
+                cppendorse:prem_no      = sfpend_alias:prem_No,
+                cppendorse:build_no     = sfpend_alias:build_no,
+                cppendorse:code         = sfpend_alias:code, Generic
+
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+        Writefile(L_FILE_NAME,"%s",l_copyright_6)
+        Writefile(L_FILE_NAME,"%s"," ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+        Writefile(L_FILE_NAME,"%s","<033>&a4300h120V")
+        Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+        Writefile(L_FILE_NAME,"%s"," ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+        Writefile(L_FILE_NAME,"%s","PROTECTIVE SAFEGUARDS")
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h+14V")
+        Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h-14V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s"," PART I")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+        Writefile(L_FILE_NAME,"%s","This endorsement identifies the types of protective safeguards and establishes conditions for suspension of coverage. The required")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%s","information may be shown below or elsewhere in this policy.")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+        Writefile(L_FILE_NAME,"%s","The provisions of this endorsement apply only when the endorsement number is listed in the Declarations.")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%s","Except as provided below, all other provisions in this policy are unchanged.")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+40V<033>*c5455h5v0P")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","Policy # ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%n",sfpprint1:policy_no)
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+240V")
+        Writefile(L_FILE_NAME,"%s","SCHEDULE")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%s","Number* ")
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+0V")
+        Writefile(L_FILE_NAME,"%s","Symbol")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+        Writefile(L_FILE_NAME,"%s","Location ")
+        Writefile(L_FILE_NAME,"%n",cppendorse:prem_no)
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%s","Building ")
+        Writefile(L_FILE_NAME,"%n",cppendorse:build_no)
+        Writefile(L_FILE_NAME,"%s","<033>&a1350h+0V")
+        Writefile(L_FILE_NAME,"%s",cppendorse:symbol)
+        Writefile(L_FILE_NAME,"%s"," ")
+        Writefile(L_FILE_NAME,"%s",cppendorse:description)
+
+        Writefile(L_FILE_NAME,"%s","<033>&a200h3200V")
+        Writefile(L_FILE_NAME,"%s","* Item No. or Location/Building Nos. as Shown in the Declarations")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+200V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","COVERAGE MODIFICATION")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","This insurance is suspended at the described premises shown in the schedule if ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+        Writefile(L_FILE_NAME,"%s","you ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","fail to immediately")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+        Writefile(L_FILE_NAME,"%s","notify ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+        Writefile(L_FILE_NAME,"%s","us ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","when")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+        Writefile(L_FILE_NAME,"%s"," you:")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h+14V")
+        Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h-14V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+0V")
+        Writefile(L_FILE_NAME,"%s"," Know of any suspension of service or impairment in the working order of the protective safeguards ")
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+120V")
+        Writefile(L_FILE_NAME,"%s"," described in the schedule; or")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+160V")
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h+14V")
+        Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h-14V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s"," Fail to maintain in complete working order such protective safeguards under")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+        Writefile(L_FILE_NAME,"%s"," your")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s"," control.")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+160V")
+        Writefile(L_FILE_NAME,"%s","However, if part of an")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+        Writefile(L_FILE_NAME,"%s"," automatic sprinkler system")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s"," is shut off due to breakage, freezing conditions, leakage, ")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+        Writefile(L_FILE_NAME,"%s","or opening of sprinkler heads but")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+        Writefile(L_FILE_NAME,"%s"," you")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s"," can restore full protection within 48 hours of such shut off, this")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+        Writefile(L_FILE_NAME,"%s","insurance will not be suspended and")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+        Writefile(L_FILE_NAME,"%s"," you")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s"," do not have to notify")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+        Writefile(L_FILE_NAME,"%s"," us.")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+200V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","SYMBOL DESIGNATIONS")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","Use the following symbols to designate the type of protective safeguard:")
+        Writefile(L_FILE_NAME,"%s","<033>&a300h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","Symbol")
+        Writefile(L_FILE_NAME,"%s","<033>&a380h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","P-1 ")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+        Writefile(L_FILE_NAME,"%s","Automatic sprinkler system,")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s"," including related supervisory services.")
+        Writefile(L_FILE_NAME,"%s","<033>&a380h+160V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","P-2 ")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","Automatic fire alarm protecting the entire building and connected to a central station or reporting to a public ")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+        Writefile(L_FILE_NAME,"%s","or private fire alarm.")
+        Writefile(L_FILE_NAME,"%s","<033>&a380h+160V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","P-3 ")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","Security service with a recording system or watch clock and making hourly rounds covering the entire")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+        Writefile(L_FILE_NAME,"%s","building when the premises are not in actual operation.")
+        Writefile(L_FILE_NAME,"%s","<033>&a380h+160V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","P-4 ")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","Service contract with a privately owned fire department providing fire protection services to the described ")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+        Writefile(L_FILE_NAME,"%s","premises.")
+        Writefile(L_FILE_NAME,"%s","<033>&a380h+160V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","P-9 ")
+        Writefile(L_FILE_NAME,"%s","<033>&a1200h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","The protective safeguard system as described in the schedule.")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%s","  ")
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+        Writefile(L_FILE_NAME,"%s","<FF>")
+      }--End if sfpend_alias
+    Next sfpend_alias
+  }--End outside WHILE
+end
+
+Procedure scp
+Begin
+  L_STATE            = scpcontractor:STATE
+  L_COMPANY_ID       = sfpname:COMPANY_ID
+  L_LINE_OF_BUSINESS = sfpname:LINE_OF_BUSINESS
+
+  Access SFSOPTEND,
+     Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+         SFSOPTEND:STATE            = L_STATE,
+         SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+         SFSOPTEND:CODE             = I_CODE, generic
+
+   While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+         SFSOPTEND:STATE            = L_STATE and
+         SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+         SFSOPTEND:CODE             = I_CODE
+
+     {  --start of sfsoptend check
+       If (sfpname:eff_date >= sfsoptend:eff_date and
+          (sfpname:eff_date < sfsoptend:exp_date or
+           sfsoptend:exp_date = 0)) then
+         {
+           l_eff_date = sfsoptend:eff_date
+         }
+       next sfsoptend
+     }
+  Access SFSOPTEND,
+     Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+         SFSOPTEND:STATE            = L_STATE,
+         SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+         SFSOPTEND:CODE             = I_CODE,
+         SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+  If sfsoptend:edition <> 0 then
+    {
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a420h7080V")
+      Writefile(L_FILE_NAME,"%s","Ed. ")
+      Writefile(L_FILE_NAME,"%n",sfsoptend:edition)
+    }
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+  Writefile(L_FILE_NAME,"%s",l_copyright_6)
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a4300h120V")
+  Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+  Writefile(L_FILE_NAME,"%s","PROTECTIVE SAFEGUARDS")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h+14V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-14V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s"," PART I")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s","This endorsement identifies the types of protective safeguards and establishes conditions for suspension of coverage. The required")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","information may be shown below or elsewhere in this policy.")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+  Writefile(L_FILE_NAME,"%s","The provisions of this endorsement apply only when the endorsement number is listed in the Declarations.")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","Except as provided below, all other provisions in this policy are unchanged.")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+40V<033>*c5455h5v0P")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","Policy # ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%n",sfpprint1:policy_no)
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+240V")
+  Writefile(L_FILE_NAME,"%s","SCHEDULE")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","Number* ")
+  Writefile(L_FILE_NAME,"%s","<033>&a1350h+0V")
+  Writefile(L_FILE_NAME,"%s","Symbol")
+
+  If scpcontractor:fire_alarm = 1 then
+    {
+      Access scpprotective,
+         Set scpprotective:POLICY_NO    = scpcontractor:POLICY_NO ,
+             scpprotective:POL_YEAR     = scpcontractor:POL_YEAR ,
+             scpprotective:END_SEQUENCE = scpcontractor:END_SEQUENCE ,
+             scpprotective:prem_no      = scpcontractor:prem_no ,
+             scpprotective:build_no     = scpcontractor:build_no, generic
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+      Writefile(L_FILE_NAME,"%s","Location ")
+      Writefile(L_FILE_NAME,"%n",scpprotective:prem_no)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+      Writefile(L_FILE_NAME,"%s","Building ")
+      Writefile(L_FILE_NAME,"%n",scpprotective:build_no)
+      Writefile(L_FILE_NAME,"%s","<033>&a1350h+0V")
+      Writefile(L_FILE_NAME,"%s",scpprotective:symbol)
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",scpprotective:description)
+    }
+
+  If scpcontractor:burglary_alarm = 1 then
+    {
+      Access scpprotect,
+         Set scpprotect:POLICY_NO    = scpcontractor:POLICY_NO ,
+             scpprotect:POL_YEAR     = scpcontractor:POL_YEAR ,
+             scpprotect:END_SEQUENCE = scpcontractor:END_SEQUENCE ,
+             scpprotect:prem_no      = scpcontractor:prem_no ,
+             scpprotect:build_no     = scpcontractor:build_no, generic
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+160V")
+      Writefile(L_FILE_NAME,"%s","Location ")
+      Writefile(L_FILE_NAME,"%n",scpprotect:prem_no)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+      Writefile(L_FILE_NAME,"%s","Building ")
+      Writefile(L_FILE_NAME,"%n",scpprotect:build_no)
+      Writefile(L_FILE_NAME,"%s","<033>&a1350h+0V")
+      Writefile(L_FILE_NAME,"%s",scpprotect:security_symbol)
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",scpprotect:description)
+    }
+
+  Writefile(L_FILE_NAME,"%s","<033>&a200h3200V")
+  Writefile(L_FILE_NAME,"%s","* Item No. or Location/Building Nos. as Shown in the Declarations")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+200V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","COVERAGE MODIFICATION")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","This insurance is suspended at the described premises shown in the schedule if ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s","you ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","fail to immediately")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","notify ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s","us ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","when")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s"," you:")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h+14V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-14V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a1300h+0V")
+  Writefile(L_FILE_NAME,"%s"," Know of any suspension of service or impairment in the working order of the protective safeguards ")
+  Writefile(L_FILE_NAME,"%s","<033>&a1300h+120V")
+  Writefile(L_FILE_NAME,"%s"," described in the schedule; or")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+160V")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h+14V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-14V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s"," Fail to maintain in complete working order such protective safeguards under")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s"," your")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s"," control.")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+160V")
+  Writefile(L_FILE_NAME,"%s","However, if part of an")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s"," automatic sprinkler system")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s"," is shut off due to breakage, freezing conditions, leakage, ")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","or opening of sprinkler heads but")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s"," you")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s"," can restore full protection within 48 hours of such shut off, this")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","insurance will not be suspended and")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s"," you")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s"," do not have to notify")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s"," us.")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+200V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","SYMBOL DESIGNATIONS")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","Use the following symbols to designate the type of protective safeguard:")
+  Writefile(L_FILE_NAME,"%s","<033>&a300h+120V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","Symbol")
+  Writefile(L_FILE_NAME,"%s","<033>&a380h+120V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","P-1 ")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+  Writefile(L_FILE_NAME,"%s","Automatic sprinkler system,")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s"," including related supervisory services.")
+  Writefile(L_FILE_NAME,"%s","<033>&a380h+160V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","P-2 ")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","Automatic fire alarm protecting the entire building and connected to a central station or reporting to a public ")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","or private fire alarm.")
+  Writefile(L_FILE_NAME,"%s","<033>&a380h+160V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","P-3 ")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","Security service with a recording system or watch clock and making hourly rounds covering the entire")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","building when the premises are not in actual operation.")
+  Writefile(L_FILE_NAME,"%s","<033>&a380h+160V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","P-4 ")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","Service contract with a privately owned fire department providing fire protection services to the described ")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+120V")
+  Writefile(L_FILE_NAME,"%s","premises.")
+  Writefile(L_FILE_NAME,"%s","<033>&a380h+160V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","P-9 ")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","The protective safeguard system as described in the schedule.")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","  ")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+  Writefile(L_FILE_NAME,"%s","<FF>")
+end
+
+End
